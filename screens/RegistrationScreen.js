@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet } from 'react-native';
+import React, {useState} from 'react';
+import {View, TextInput, Button, StyleSheet} from 'react-native';
 
 const RegistrationScreen = () => {
     const [firstname, setFirstname] = useState('');
@@ -10,7 +10,7 @@ const RegistrationScreen = () => {
 
     const handleSubmit = () => {
         // API endpoint for registration
-        const apiUrl = 'http://192.168.2.31/api/public/user/register';
+        const apiUrl = 'http://10.1.1.118/api/public/user/register';
 
         // Sending json data
         const data = {
@@ -21,22 +21,28 @@ const RegistrationScreen = () => {
             plainPassword: password
         };
 
-        fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // Add any additional headers if required
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => response.json())
-            .then(result => {
-                // Handle result from API, e.g., display success message, navigate to login screen, etc.
-                console.log('Registration successful', result);
+        try {
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Add any additional headers if required
+                },
+                body: JSON.stringify(data)
             })
-            .catch(error => {
-                console.error('Error registering:', error);
-            });
+                .then(response => response.text())
+                .then(result => {
+                    // Handle result from API, e.g., display success message, navigate to login screen, etc.
+                    console.log('Registration successful', result);
+                })
+                .catch(error => {
+
+                    console.error('Error registering:', error);
+                });
+
+        } catch (err) {
+            console.log(err.message);
+        }
     };
 
     return (
