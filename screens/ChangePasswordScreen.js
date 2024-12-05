@@ -1,18 +1,15 @@
-import React, {useEffect, useState} from 'react';
-import {View, TextInput, Button, StyleSheet, Text, Pressable, ActivityIndicator, TouchableOpacity} from 'react-native';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, {useState} from 'react';
+import {View, TextInput, Button, StyleSheet, Text, Pressable, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Config from "../config/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export default function RegistrationScreen({navigation}) {
-    const [firstname, setFirstname] = useState('');
-    const [lastname, setLastname] = useState('');
-    const [email, setEmail] = useState('');
+export default function RegistrationScreen({route, navigation}) {
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(true);
     const [confirmPassword, setConfirmPassword] = useState('');
     const [errorMessage, setErrorMessage] = useState(null);
     const [isSecure, setIsSecure] = useState(true);
+    const { userId } = route.params;
     const togglePasswordVisibility = () => {
         setIsSecure(!isSecure);
     };
@@ -33,7 +30,8 @@ export default function RegistrationScreen({navigation}) {
     // Handle password generation on button press
     const handleGeneratePassword = () => {
         const generatedPassword = generatePassword(16); // Suggest 16 character password
-        setPassword(generatedPassword);
+        setPassword(generatedPassword)
+        setConfirmPassword(generatedPassword);
     };
 
     const checkPassword = () => {
@@ -44,52 +42,22 @@ export default function RegistrationScreen({navigation}) {
         }
     };
 
-    const checkToken = async () => {
-        try {
-            const token = await AsyncStorage.getItem('token');
-            if (token) {
-                setErrorMessage(null);
-                navigation.navigate('Profile');
-            }
-        } catch (error) {
-            console.error('Error', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        checkToken();
-    }, []);
-
-    /**
-     * Load spinner while loading
-     */
-    if (loading) {
-        // Show loading spinner while checking token
-        return (
-            <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-                <ActivityIndicator size="large" color="#0000ff"/>
-            </View>
-        );
-    }
-
-    const handleSubmit = (firstname, lastname, email, password) => {
+    const handleCodeSubmit = async (password) => {
         // API endpoint for registration
-        const apiUrl = Config.API_BASE_URL+'/api/public/user/register';
+        const apiUrl = Config.API_BASE_URL+'/api/users/'+userId;
 
         // Sending json data
         const data = {
-            firstName: firstname,
-            lastName: lastname,
-            email: email,
             plainPassword: password
         };
 
+        const token = await AsyncStorage.getItem('token');
+
         try {
             fetch(apiUrl, {
-                method: 'POST',
+                method: 'PATCH',
                 headers: {
+                    'Authorization': 'Bearer ${token}',
                     'Content-Type': 'application/json',
                     // Add any additional headers if required
                 },
@@ -97,18 +65,11 @@ export default function RegistrationScreen({navigation}) {
             })
                 .then(response => response.json())
                 .then(result => {
-                    console.log(result);
-                    const message = result.detail;
-                    if (message) {
-                        console.log('Registration unsuccesfull', result);
-                        setErrorMessage('Registration unsuccesfull: \n' + result.detail);
-                    } else {
-                        navigation.navigate('Login');
-                    }
+                   console.log(result);
+
                 })
                 .catch(error => {
-
-                    console.error('Error registering:', error);
+                    console.error('Error saving:', error);
                 });
 
         } catch (err) {
@@ -118,26 +79,6 @@ export default function RegistrationScreen({navigation}) {
 
     return (
         <View style={styles.container}>
-            <TextInput
-                style={styles.input}
-                placeholder="Firstname"
-                onChangeText={text => setFirstname(text)}
-                value={firstname}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Lastname"
-                onChangeText={text => setLastname(text)}
-                value={lastname}
-            />
-            <TextInput
-                style={styles.input}
-                placeholder="Email"
-                type="email"
-                onChangeText={text => setEmail(text)}
-                value={email}
-                keyboardType="email-address"
-            />
             <View style={[styles.input, styles.inputContainer]}>
                 <TextInput
                     style={styles.inputPassword}
@@ -175,9 +116,9 @@ export default function RegistrationScreen({navigation}) {
             )}
             <Pressable
                 style={styles.button}
-                onPress={() => handleSubmit(firstname, lastname, email, password)}
+                onPress={() => handleCodeSubmit(password)}
             >
-                <Text style={styles.text}>Register</Text>
+                <Text style={styles.text}>Save</Text>
             </Pressable>
         </View>
     );
