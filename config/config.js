@@ -7,7 +7,7 @@ const Config = {
      *
      * @constant {string}
      */
-    API_BASE_URL: 'http://10.1.1.134',
+    API_BASE_URL: 'http://10.1.1.128',
 
     /**
      * The name of the application.

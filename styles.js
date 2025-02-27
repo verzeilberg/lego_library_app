@@ -2,6 +2,7 @@ import {StyleSheet} from "react-native";
 
 export const globalStyles = StyleSheet.create({
     container: {
+        marginTop: 15,
         flex: 0,
         justifyContent: 'center',
         alignItems: 'center',
@@ -67,8 +68,7 @@ export const globalStyles = StyleSheet.create({
     },
     paragraph: {
         width:'80%',
-        justifyContent: 'center',
-        marginTop: 20
+        marginTop: 20,
     },
     linking: {
         marginBottom: 20,

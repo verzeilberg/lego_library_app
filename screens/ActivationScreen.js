@@ -1,8 +1,9 @@
 import React, {useState, useRef} from 'react';
 import {View, TextInput, Text, Pressable} from 'react-native';
 import {globalStyles} from "../styles";
-import {handleChange, handleKeyPress} from "../components/Functions";
-import {handleForgotPasswordCodeSubmit} from "../components/Apicalls";
+import {handleCodeSubmit} from "../components/Apicalls";
+import {handleChange} from "../components/Functions";
+import {handleKeyPress} from "../components/Functions";
 
 export default function FourDigitCodeInput({navigation}) {
     const [code, setCode] = useState(['', '', '', '']);
@@ -11,7 +12,7 @@ export default function FourDigitCodeInput({navigation}) {
 
     return (
         <View style={globalStyles.container}>
-            <Text style={globalStyles.paragraph}>Vul hieronder het 4-cijferige code in die u heeft ontvangen via de mail.</Text>
+            <Text style={globalStyles.paragraph}>Beste gebruiker, Vul hieronder het 4-cijferige code in die u heeft ontvangen via de mail.</Text>
             <View style={globalStyles.row}>
                 {code.map((digit, index) => (
                     <TextInput
@@ -19,7 +20,7 @@ export default function FourDigitCodeInput({navigation}) {
                         ref={(input) => (inputRefs.current[index] = input)}
                         style={globalStyles.inputNumber}
                         value={digit}
-                        onChangeText={(text) => handleChange(text, index, code,  setCode, inputRefs)}
+                        onChangeText={(text) => handleChange(text, index, code, setCode, inputRefs)}
                         onKeyPress={(e) => handleKeyPress(e, index, code, inputRefs)}
                         keyboardType="numeric"
                         maxLength={1}
@@ -32,9 +33,9 @@ export default function FourDigitCodeInput({navigation}) {
             )}
             <Pressable
                 style={globalStyles.button}
-                onPress={() => handleForgotPasswordCodeSubmit(code, setErrorMessage, navigation)}
+                onPress={() => handleCodeSubmit(code, setErrorMessage, navigation)}
             >
-                <Text style={globalStyles.text}>Reset</Text>
+                <Text style={globalStyles.text}>Activate</Text>
             </Pressable>
         </View>
     );

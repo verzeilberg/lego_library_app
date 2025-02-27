@@ -11,6 +11,7 @@ import LogoutScreen from './screens/LogoutScreen';
 import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import ChangePasswordScreen from "./screens/ChangePasswordScreen";
+import ActivationScreen from "./screens/ActivationScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -78,7 +79,8 @@ function App() {
                 />
                 <Stack.Screen name="Profile" component={ProfileScreen} options={{
                     title: 'Profile',
-                    animation: 'fade'
+                    animation: 'fade',
+                    headerBackVisible: false,
                 }}/>
                 <Stack.Screen name="Registration" component={RegistrationScreen} options={{
                     title: 'Registration',
@@ -94,6 +96,10 @@ function App() {
                 }}/>
                 <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{
                     title: 'Change Password',
+                    animation: 'fade'
+                }}/>
+                <Stack.Screen name="ActivateAccount" component={ActivationScreen} options={{
+                    title: 'Activate account',
                     animation: 'fade'
                 }}/>
                 <Stack.Screen name="Logout" component={LogoutScreen} options={{
