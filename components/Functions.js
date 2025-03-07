@@ -126,7 +126,7 @@ export const handleChange = (text, index, code,  setCode, inputRefs) => {
  * @function
  * @throws Will throw an error if the upload process encounters an issue.
  */
-export const selectAndUploadImage = async (setImageUri) => {
+export const selectAndUploadImage = async (setImageUri, setData, setUploading) => {
     // Request permission
     const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -144,7 +144,7 @@ export const selectAndUploadImage = async (setImageUri) => {
 
     if (!result.canceled) {
         setImageUri(result.assets[0].uri); // Store the selected image preview
-        await uploadImage(result.assets[0].uri);
+        await uploadImage(result.assets[0].uri, setData, setUploading);
     }
 };
 
@@ -163,8 +163,7 @@ export const selectAndUploadImage = async (setImageUri) => {
  *
  * Note: The URI should correspond to an existing image in the specified format (e.g., "image/jpeg").
  */
-export const uploadImage = async (uri) => {
-    setUploading(true);
+export const uploadImage = async (uri, setData, setUploading) => {
     // Prepare form data
     const formData = new FormData();
     formData.append("file", {
@@ -186,10 +185,11 @@ export const uploadImage = async (uri) => {
             body: formData,
         });
 
-        if (!response.ok) {
-            throw new Error("Upload failed");
-        }
         const jsonData = await response.json();
+        if(jsonData['error']) {
+            Alert.alert("Upload Error", jsonData['error']);
+            return;
+        }
         setData(jsonData);
     } catch (error) {
         console.log(error);

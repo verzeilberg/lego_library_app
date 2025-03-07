@@ -21,7 +21,7 @@ const ProfileScreen = ({navigation}) => {
     }, []); // Empty dependency array ensures this only runs on component load
 
     //If loading show spinner
-    if (loading) {
+    if (uploading) {
         return <LoadingSpinner />;
     }
 
@@ -32,7 +32,7 @@ const ProfileScreen = ({navigation}) => {
     return (
         <View style={globalStyles.container}>
             <View style={globalStyles.container}>
-                <TouchableOpacity  onPress={() => selectAndUploadImage(setImageUri)}>
+                <TouchableOpacity  onPress={() => selectAndUploadImage(setImageUri, setData, setUploading)}>
                 {<Image source={{ uri: Config.API_BASE_URL + data.profilePicture }} style={globalStyles.imageContainer}  />}
                 </TouchableOpacity>
             </View>
