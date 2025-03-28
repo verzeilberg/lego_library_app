@@ -1,10 +1,9 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, ActivityIndicator, Image, Platform, Alert, Button, TouchableOpacity} from 'react-native';
+import {View, Text, Image, TouchableOpacity} from 'react-native';
 import Config from "../config/config";
 import {globalStyles} from '../styles';
 import {selectAndUploadImage, fetchData} from "../components/Functions";
 import LoadingSpinner from "../components/Elements";
-
 
 const ProfileScreen = ({navigation}) => {
     const [data, setData] = useState(null); // To store the fetched data
@@ -18,10 +17,10 @@ const ProfileScreen = ({navigation}) => {
      */
     useEffect(() => {
         fetchData(setData, setError, setLoading);
-    }, []); // Empty dependency array ensures this only runs on component load
+    }, []); // Empty dependency array ensures this only runs on a component load
 
     //If loading show spinner
-    if (uploading) {
+    if (loading) {
         return <LoadingSpinner />;
     }
 

@@ -128,4 +128,55 @@ export const globalStyles = StyleSheet.create({
         padding: 8,
         borderRadius: 5,
     },
+    loader: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    hamburger: {
+        marginRight: 15,
+        padding: 10,
+        zIndex: 10,
+    },
+    hamburgerText: {
+        fontSize: 24,
+        color: '#fff',
+    },
+    closeButton: {
+        position: 'absolute',
+        top: 10,
+        right: 15,
+    },
+    closeText: {
+        fontSize: 45,
+        color: '#fff',
+    },
+    sideBar: {
+        position: 'absolute', // Ensures overlay effect
+        top: 0,
+        bottom: 0,
+        left: -250, // Initially off-screen
+        width: 250,
+        backgroundColor: '#5a5a5a',
+        padding: 0,
+        justifyContent: 'center',
+        zIndex: 100, // Ensure it's above other elements
+        elevation: 5, // Shadow effect on Android
+
+        menuItem: {
+            borderTopColor: '##808080',
+            borderRadius: 5,
+            borderTopWidth: 1,
+            padding: 10,
+        },
+        menuText: {
+            fontSize: 18,
+            color: '#fff',
+            fontWeight: 'bold',
+        },
+
+        icon: {
+            paddingRight: 40,
+        }
+    },
 });

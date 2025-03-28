@@ -171,7 +171,6 @@ export const handlePasswordSubmit = async (password, navigation) => {
 };
 
 export const handleForgotPasswordSubmit = (email, setErrorMessage, navigation) => {
-    // Assuming platformAPI is your API endpoint (ip is ip4 from internet connection (wifi or cable), you can not use a server with a port like 8080)
     const apiUrl = Config.API_BASE_URL+'/api/public/user/forgot-password';
     setErrorMessage(null);
     // Assuming your API expects JSON data
