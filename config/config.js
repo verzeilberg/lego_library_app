@@ -4,10 +4,11 @@ const Config = {
      *
      * This constant string represents the root endpoint for making API requests.
      * It is used throughout the application to build full API request URLs.
-     *
+     * 192.168.2.254
+     * 10.1.1.128
      * @constant {string}
      */
-    API_BASE_URL: 'http://10.1.1.128',
+    API_BASE_URL: 'http://192.168.2.31',
 
     /**
      * The name of the application.

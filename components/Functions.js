@@ -221,3 +221,27 @@ export const fetchData = async (setData, setError, setLoading) => {
         setLoading(false); // Stop loading after the fetch is complete
     }
 };
+
+export const fetchModelLists= async (setData, setError, setLoading) => {
+    const token = await AsyncStorage.getItem('token');
+    const apiUrl = Config.API_BASE_URL + '/api/model-lists';
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+            },
+        });
+        if (!response) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const jsonData = await response.json();
+        console.log(jsonData);
+        setData(jsonData);
+    } catch (error) {
+        setError(error.message || 'Something went wrong!');
+    } finally {
+        setLoading(false); // Stop loading after the fetch is complete
+    }
+};

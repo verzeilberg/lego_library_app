@@ -32,6 +32,14 @@ export default function Sidebar({ visible, closeMenu }) {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => {
                 closeMenu();
+                navigation.navigate('Borden');
+            }} style={globalStyles.sideBar.menuItem}>
+                <Text style={globalStyles.sideBar.menuText}>
+                    <Icon name='th-list' size={20} style={globalStyles.sideBar.icon}/> Borden
+                </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => {
+                closeMenu();
                 navigation.navigate('Logout');
             }} style={globalStyles.sideBar.menuItem}>
                 <Text style={globalStyles.sideBar.menuText}>

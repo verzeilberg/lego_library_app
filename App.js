@@ -12,6 +12,7 @@ import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 import ResetPasswordScreen from "./screens/ResetPasswordScreen";
 import ChangePasswordScreen from "./screens/ChangePasswordScreen";
 import ActivationScreen from "./screens/ActivationScreen";
+import BordenScreen from "./screens/BordenScreen";
 import {globalStyles} from './styles';
 import Sidebar from './components/Sidebar';
 
@@ -63,21 +64,23 @@ function App() {
                         headerShadowVisible: false,
                         animation: 'fade_from_bottom',
                         contentStyle: {backgroundColor: '#f8f8f8'},
+                        headerShown: true
                     }}
                 >
                     <Stack.Screen name="Login"
                                   component={LoginScreen}
                                   options={{
                                       title: 'Login',
-                                      animation: 'fade',
-                                      headerBackVisible: false
+                                      animation: 'slide_from_right',
+                                      headerBackVisible: false,
+                                      headerShown: false
                     }}/>
                     <Stack.Screen name="Profile"
                                   component={ProfileScreen}
                                   options={{
                                       title: 'Profile',
-                                      animation: 'fade',
-                                      headerBackVisible: false,
+                                      animation: 'slide_from_right',
+                                      headerBackVisible: true,
                                       headerRight: () => {
                                           const navigation = useNavigation();
                                           return (
@@ -89,17 +92,19 @@ function App() {
                                       },
                                   }}/>
                     <Stack.Screen name="Registration" component={RegistrationScreen}
-                                  options={{title: 'Registration', animation: 'fade'}}/>
+                                  options={{title: 'Registration', animation: 'slide_from_right'}}/>
                     <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen}
-                                  options={{title: 'Forgot Password', animation: 'fade'}}/>
+                                  options={{title: 'Forgot Password', animation: 'slide_from_right'}}/>
                     <Stack.Screen name="ResetPassword" component={ResetPasswordScreen}
-                                  options={{title: 'Reset Password', animation: 'fade'}}/>
+                                  options={{title: 'Reset Password', animation: 'slide_from_right'}}/>
                     <Stack.Screen name="ChangePassword" component={ChangePasswordScreen}
-                                  options={{title: 'Change Password', animation: 'fade'}}/>
+                                  options={{title: 'Change Password', animation: 'slide_from_right'}}/>
                     <Stack.Screen name="ActivateAccount" component={ActivationScreen}
-                                  options={{title: 'Activate account', animation: 'fade'}}/>
+                                  options={{title: 'Activate account', animation: 'slide_from_right'}}/>
+                    <Stack.Screen name="Borden" component={BordenScreen}
+                                  options={{title: 'Borden', animation: 'slide_from_right'}}/>
                     <Stack.Screen name="Logout" component={LogoutScreen}
-                                  options={{title: 'Logout', animation: 'fade'}}/>
+                                  options={{title: 'Logout', animation: 'slide_from_right'}}/>
                 </Stack.Navigator>
             </View>
         </NavigationContainer>

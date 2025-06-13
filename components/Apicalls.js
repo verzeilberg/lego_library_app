@@ -235,3 +235,43 @@ export const handleForgotPasswordCodeSubmit = async (code, setErrorMessage, navi
     }
 };
 
+export const handleSubmitAddBoard = (name, description, public_private, setErrorMessage, navigation) => {
+    // API endpoint for registration
+    const apiUrl = Config.API_BASE_URL+'/api/public/user/register';
+
+    // Sending json data
+    const data = {
+        firstName: firstname,
+        lastName: lastname,
+        email: email,
+        plainPassword: password
+    };
+
+    try {
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(result => {
+                const message = result.detail;
+                if (message) {
+                    setErrorMessage('Registration unsuccesfull: \n' + result.detail);
+                } else {
+                    const token = result.token;
+                    AsyncStorage.setItem('activation-token', token);
+                    navigation.navigate('ActivateAccount');
+                }
+            })
+            .catch(error => {
+                console.error('Error registering:', error);
+            });
+
+    } catch (err) {
+        console.error(err.message);
+    }
+};
+

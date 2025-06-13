@@ -1,4 +1,4 @@
-import {TextInput, View, Text, Pressable, TouchableOpacity} from "react-native";
+import {TextInput, View, Text, Pressable, TouchableOpacity, Image} from "react-native";
 import React, {useEffect, useState} from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { globalStyles } from '../styles';
@@ -25,6 +25,11 @@ export default function LoginScreen({navigation}) {
 
     return (
         <View style={globalStyles.container}>
+            <Image
+                style={globalStyles.stretch}
+                source={require('../assets/images/lego_logo.png')}
+            />
+
             <Text style={globalStyles.paragraph.right}>Please login to get acces to your account!</Text>
 
             <TextInput
@@ -59,7 +64,7 @@ export default function LoginScreen({navigation}) {
                 style={globalStyles.button}
                 onPress={() => handleSubmitLogin(email, password, navigation, setErrorMessage)}
             >
-                <Text style={globalStyles.text}>Login</Text>
+                    <Text style={globalStyles.text}>Login</Text>
             </Pressable>
 
             <View style={globalStyles.row}>
