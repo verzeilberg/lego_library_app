@@ -1,6 +1,9 @@
 import { StyleSheet } from 'react-native';
 
 export const globalStyles = StyleSheet.create({
+    containerKeyboard: {
+      flex:1
+    },
     container: {
         marginTop: 15,
         marginHorizontal: 20,
@@ -20,6 +23,9 @@ export const globalStyles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 8,
+    },
+    input3: {
+        marginBottom: 16,
     },
     input: {
         width: '100%',
@@ -79,6 +85,7 @@ export const globalStyles = StyleSheet.create({
         fontWeight: 'bold',
         letterSpacing: 0.50,
         color: 'white',
+        marginRight: 15,
     },
     textContainer: {
         flex: 1,
@@ -139,7 +146,7 @@ export const globalStyles = StyleSheet.create({
         marginBottom: 8,
         textAlign: 'center',
     },
-    imageContainer: {
+    imageRoundContainer: {
         width: 150,
         height: 150,
         borderRadius: 75,
@@ -149,14 +156,28 @@ export const globalStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    parentImageRectangleContainer: {
+        width: "100%",
+        aspectRatio: 16 / 9,
+        backgroundColor: '#e1e1e1',
+        borderRadius: 5,
+    },
+    imageRectangleContainer: {
+        width: "100%",
+        backgroundColor: "#e1e1e1",
+        aspectRatio: 16 / 9,
+        padding: 15,
+        borderRadius: 8,
+        alignItems: "center",
+    },
     placeholder: {
         color: '#777',
     },
     editButton: {
-        position: 'absolute', // Position above the image
-        top: 10, // Adjust top position as needed
-        right: 10, // Adjust right position as needed
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         padding: 8,
         borderRadius: 5,
     },
@@ -212,7 +233,7 @@ export const globalStyles = StyleSheet.create({
     },
     listContainer: {
         padding: 16,
-        flex: 1,
+        flexGrow: 1,
     },
     card: {
         backgroundColor: '#fff',
@@ -239,6 +260,7 @@ export const globalStyles = StyleSheet.create({
         alignItems: 'center',
         borderTopRightRadius: 16,
         borderTopLeftRadius: 16,
+        borderBottomRightRadius: 16,
     },
     modalContainer: {
         width: '100%',
@@ -250,13 +272,18 @@ export const globalStyles = StyleSheet.create({
         marginBottom: 20,
     },
     modalCloseButton: {
-        backgroundColor: '#007BFF', // Mooi blauw
         padding: 6,
         alignItems: 'center',
         justifyContent: 'center',
         width: 40,
         height: 40,
-        borderRadius: 20,
+        borderRadius: 10,
+        backgroundColor: '#007AFF',
+        elevation: 5, // for Android shadow
+        shadowColor: '#000', // for iOS shadow
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
     },
     modalInputFields: {
             width: '100%',
@@ -270,11 +297,11 @@ export const globalStyles = StyleSheet.create({
     openModalButton: {
         position: 'absolute',
         right: 10,
-        bottom: 10,
+        bottom: 50,
         backgroundColor: '#007AFF',
-        width: 60,
-        height: 60,
-        borderRadius: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 5, // for Android shadow
@@ -286,7 +313,8 @@ export const globalStyles = StyleSheet.create({
     openModalButtonText: {
         flex: 1,
         color: '#fff',
-        fontSize: 40,
+        fontSize: 30,
+        lineHeight: 37
     },
     counterLimit: {
         color: 'red',
@@ -317,6 +345,16 @@ export const globalStyles = StyleSheet.create({
         marginBottom: 10,
         paddingHorizontal: 10,
     },
+    floatLabelInput: {
+        width: '100%',
+        height: 45,
+        borderColor: 'gray',
+        borderWidth: 1,
+        borderRadius: 5,
+        marginTop: 10,
+        marginBottom: 10,
+        paddingHorizontal: 13,
+    },
     counter: {
         position: 'absolute',
         right: 10,
@@ -325,4 +363,13 @@ export const globalStyles = StyleSheet.create({
         color: 'gray',
         backgroundColor: 'transparent',
     },
+    imagePlaceholder: {
+        position: 'absolute',
+        marginTop: 10,
+        backgroundColor: '#FF4D4D',
+        padding: 2,
+        borderRadius: 15,
+        bottom: 20,
+        right: 0,
+    }
 });

@@ -44,7 +44,11 @@ export default function RegistrationScreen({navigation}) {
                 type="email"
                 onChangeText={text => setEmail(text)}
                 value={email}
+                autoComplete="email"
+                textContentType="emailAddress"
                 keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
             />
             <View style={[globalStyles.input, globalStyles.inputContainer]}>
                 <TextInput

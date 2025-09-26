@@ -1,28 +1,43 @@
-import {Modal, Text, Switch, TextInput, TouchableOpacity, View, Pressable} from "react-native";
+import {Modal, Text, Switch, TextInput, TouchableOpacity, View, Pressable, Image} from "react-native";
 import {globalStyles} from "../styles";
 import React, {useState} from "react";
-import {checkPassword} from "./Functions";
+import {checkPassword, selectAndUploadImage} from "./Functions";
 import {handleSubmitAddBoard, handleSubmitRegistration} from "./Apicalls";
+import Icon from "react-native-vector-icons/FontAwesome";
+import Config from "../config/config";
+import {selectImage} from "./Functions";
 
-export default function AddModal() {
+export default function AddModal({onDataUpdated}) {
     const [modalVisible, setModalVisible] = useState(false);
-    const [name, setName] = useState('');
+    const [imageUri, setImageUri] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [data, setData] = useState(null); // To store the fetched data
+    const [title, setTitle] = useState('');
     const maxLength = 50;
     const [description, setDescription] = useState('');
-    const isMaxReached = name.length >= maxLength;
+    const isMaxReached = title.length >= maxLength;
     const [isPublicPrivate, setIsPublicPrivate] = useState(false);
     const toggleSwitch = () => setIsPublicPrivate(previousState => !previousState);
     const [errorMessage, setErrorMessage] = useState(null);
 
+    const [selectedImage, setSelectedImage] = useState(null);
 
+    const pickImage = async () => {
+        const result = await selectImage();
+        console.log('Image result:', result);
 
-    const [email, setEmail] = useState('');
+        if (!result.canceled) {
+            setSelectedImage(result.assets[0].uri);
+        }
+    };
 
     return (
         <View style={globalStyles.modalPlaceHolder}>
 
             <TouchableOpacity style={globalStyles.openModalButton} onPress={() => setModalVisible(true)}>
-                <Text style={globalStyles.openModalButtonText}>+</Text>
+                <Text style={globalStyles.openModalButtonText}>
+                    <Icon name={'plus'} size={20}/>
+                </Text>
             </TouchableOpacity>
 
             {/* Modal popup */}
@@ -38,28 +53,36 @@ export default function AddModal() {
                             <View style={{flex: 1, alignItems: 'center'}}>
                                 <Text style={globalStyles.h1}>Bord aanmaken</Text>
                             </View>
-                            <TouchableOpacity style={globalStyles.modalCloseButton}
-                                              onPress={() => setModalVisible(false)}>
-                                <Text style={globalStyles.buttonText}>X</Text>
+                        </View>
+                        <View style={{flexDirection: 'row', width: "100%"}}>
+                            <TouchableOpacity
+                                style={globalStyles.parentImageRectangleContainer}
+                                onPress={pickImage}
+                            >
+                                <Image
+                                    source={selectedImage ? { uri: selectedImage } : { uri: Config.API_BASE_URL }}
+                                    style={globalStyles.imageRectangleContainer}
+                                    resizeMode="cover"
+                                />
                             </TouchableOpacity>
                         </View>
-                        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 10, marginTop: 10, width: '100%'}}>
+                        <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
                             <TextInput
                                 style={globalStyles.input2}
-                                value={name}
+                                value={title}
                                 onChangeText={(t) => {
                                     if (t.length <= maxLength) {
-                                        setName(t);
+                                        setTitle(t);
                                     }
                                 }}
-                                placeholder="Naam"
+                                placeholder="Titel"
                                 multiline={false}
                                 maxLength={maxLength}
                             />
                             {/* Overlay de teller op de TextInput */}
                             <TextInput
                                 style={globalStyles.counter}
-                                value={`${name.length}/${maxLength}`}
+                                value={`${title.length}/${maxLength}`}
                                 editable={false}
                                 pointerEvents="none"
                             />
@@ -69,6 +92,7 @@ export default function AddModal() {
                             style={globalStyles.textArea}
                             multiline
                             numberOfLines={4}
+                            onChangeText={setDescription}
                             placeholder="Omschrijving"
                             textAlignVertical="top"
                             value={description}
@@ -88,13 +112,10 @@ export default function AddModal() {
 
                         <Pressable
                             style={globalStyles.button}
-                            onPress={() => {
-                                    handleSubmitAddBoard(name, description, isPublicPrivate, setErrorMessage, navigation);
-                            }}
+                            onPress={() => handleSubmitAddBoard(title, description, isPublicPrivate, selectedImage, setErrorMessage, setModalVisible, onDataUpdated)}
                         >
                             <Text style={globalStyles.text}>Bord toevoegen</Text>
                         </Pressable>
-
                     </View>
                 </View>
             </Modal>

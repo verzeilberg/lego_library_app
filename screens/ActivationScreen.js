@@ -33,7 +33,7 @@ export default function FourDigitCodeInput({navigation}) {
             )}
             <Pressable
                 style={globalStyles.button}
-                onPress={() => handleCodeSubmit(code, setErrorMessage, navigation)}
+                onPress={() => handleCodeSubmit(code, navigation, setErrorMessage)}
             >
                 <Text style={globalStyles.text}>Activate</Text>
             </Pressable>

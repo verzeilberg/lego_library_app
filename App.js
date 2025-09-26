@@ -36,6 +36,7 @@ function App() {
     };
 
     useEffect(() => {
+        console.log('Hit hem up high!')
         checkToken();
     }, []);
 
@@ -80,7 +81,7 @@ function App() {
                                   options={{
                                       title: 'Profile',
                                       animation: 'slide_from_right',
-                                      headerBackVisible: true,
+                                      headerBackVisible: false,
                                       headerRight: () => {
                                           const navigation = useNavigation();
                                           return (
@@ -101,8 +102,22 @@ function App() {
                                   options={{title: 'Change Password', animation: 'slide_from_right'}}/>
                     <Stack.Screen name="ActivateAccount" component={ActivationScreen}
                                   options={{title: 'Activate account', animation: 'slide_from_right'}}/>
-                    <Stack.Screen name="Borden" component={BordenScreen}
-                                  options={{title: 'Borden', animation: 'slide_from_right'}}/>
+                    <Stack.Screen name="Borden"
+                                  component={BordenScreen}
+                                  options={{
+                                      title: 'Borden',
+                                      animation: 'slide_from_right',
+                                      headerBackVisible: false,
+                                      headerRight: () => {
+                                          const navigation = useNavigation();
+                                          return (
+                                              <Pressable style={globalStyles.hamburger}
+                                                         onPressIn={() => setMenuVisible(true)}>
+                                                  <Text style={globalStyles.hamburgerText}>☰</Text>
+                                              </Pressable>
+                                          );
+                                      },
+                    }}/>
                     <Stack.Screen name="Logout" component={LogoutScreen}
                                   options={{title: 'Logout', animation: 'slide_from_right'}}/>
                 </Stack.Navigator>

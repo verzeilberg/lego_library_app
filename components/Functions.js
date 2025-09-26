@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, {useState, useRef} from 'react';
 import * as ImagePicker from "expo-image-picker";
 import {Alert} from "react-native";
 import Config from "../config/config";
-
-
+import * as ImageManipulator from 'expo-image-manipulator';
+import jwtDecode from "jwt-decode";
+import {refreshToken, handleSubmitDeleteProfile} from "./Apicalls";
 
 /**
  * Handles the key press event for a given input element.
@@ -24,28 +24,65 @@ export const handleKeyPress = (e, index, code, inputRefs) => {
 
 
 /**
- * An asynchronous function to check for the existence of a token in AsyncStorage.
- * If a token is found, it clears any current error message, removes the token from AsyncStorage,
- * and navigates to the 'Profile' screen. If an error occurs, it will log the error to the console.
- * After the process completes, it will set the loading state to false.
+ * Asynchronously checks the token stored in AsyncStorage to verify its validity and redirects
+ * the user to the appropriate screen based on the token's status. If the token is missing,
+ * expired, or invalid, the user is redirected to the "Login" screen. If the token is valid
+ * or successfully refreshed, the user is redirected to the "Profile" screen.
  *
- * @returns {Promise<void>} A promise that resolves when the token check and any subsequent actions are complete.
- **/
+ * @param {object} navigation - The navigation object used for redirecting the user to different screens.
+ * @param {function} setErrorMessage - A setter function to update the error message in the state.
+ * @param {function} setLoading - A setter function to indicate the loading state during the token check.
+ *
+ * @async
+ * @throws {Error} If there's an issue retrieving or decoding the token, or during token refresh operations.
+ */
 export const checkToken = async (navigation, setErrorMessage, setLoading) => {
     try {
-        await AsyncStorage.clear();
-        const token = await AsyncStorage.getItem('token');
-        if (token) {
+        const token = await AsyncStorage.getItem("token");
+
+        if (!token) {
+            navigation.navigate("Login");
+            return;
+        }
+
+        // Decode token and check expiry
+        const decoded = jwtDecode(token);
+        //@todo restore code
+        //const now = Date.now().valueOf() / 1000;
+        const now = (Date.now().valueOf() / 1000) + 999999;
+
+        if (decoded.exp && decoded.exp < now) {
+            // Try to refresh the token
+            const newToken = await refreshToken(token);
+
+            if (newToken) {
+                await AsyncStorage.setItem("token", newToken);
+                navigation.navigate("Profile");
+            } else {
+                await AsyncStorage.removeItem("token");
+                navigation.navigate("Login");
+            }
+        } else {
             setErrorMessage(null);
-            navigation.navigate('Profile');
+            navigation.navigate("Profile");
         }
     } catch (error) {
-        console.error('Error logging out', error);
+        console.error("Error checking token", error);
+        navigation.navigate("Login");
     } finally {
         setLoading(false);
     }
 };
 
+
+
+
+/**
+ * Toggles the visibility of a password field by inverting the current secure state.
+ *
+ * @param {boolean} isSecure - The current state indicating whether the password field is secure (hidden).
+ * @param {Function} setIsSecure - A function to update the state of the password field's visibility.
+ */
 export const togglePasswordVisibility = (isSecure, setIsSecure) => {
     setIsSecure(!isSecure);
 };
@@ -109,24 +146,7 @@ export const handleChange = (text, index, code,  setCode, inputRefs) => {
     setCode(newCode);
 };
 
-/**
- * Asynchronously selects an image from the device's media library and uploads it if an image is selected.
- *
- * This function performs the following steps:
- * 1. Requests permission to access the device's media library. If permission is denied,
- *    an alert is shown to the user, and the function terminates.
- * 2. Opens the image picker to allow the user to select an image from their library.
- *    Only images are selectable, and users can crop the image with a predefined aspect ratio.
- * 3. If an image is successfully selected, its URI is stored and the image is uploaded.
- *
- * Ensure that this function is executed in a compatible environment where the `ImagePicker`
- * module and the `uploadImage` and `setImageUri` dependencies are available.
- *
- * @async
- * @function
- * @throws Will throw an error if the upload process encounters an issue.
- */
-export const selectAndUploadImage = async (setImageUri, setData, setUploading) => {
+export const selectAndUploadImage2 = async (setImageUri, setData, setUploading) => {
     // Request permission
     const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -136,7 +156,7 @@ export const selectAndUploadImage = async (setImageUri, setData, setUploading) =
 
     // Open image picker
     const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: [ImagePicker.MediaType.Image],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
@@ -149,9 +169,126 @@ export const selectAndUploadImage = async (setImageUri, setData, setUploading) =
 };
 
 /**
+ * Prompts the user to select an option to either take a photo using the camera or select an image from the library.
+ * The selected image's URI and associated data will be set using the provided setter functions.
+ *
+ * @param {Function} setImageUri - A function to update the state with the selected image's URI.
+ * @param {Function} setData - A function to update the state with additional data related to the selected image.
+ * @param {Function} setUploading - A function to update the state indicating the upload process status.
+ * @returns {Promise<void>} A promise that resolves once the operation is completed.
+ */
+export const selectAndUploadImage = async (setImageUri, setData, setUploading) => {
+    Alert.alert(
+        "Kies een optie",
+        "Wil je een foto nemen of kiezen uit de bibliotheek?",
+        [
+            { text: "Camera", onPress: async () => await openCamera(setImageUri, setData, setUploading) },
+            { text: "Bibliotheek", onPress: async () => await openImageLibrary(setImageUri, setData, setUploading) },
+            { text: "Annuleer", style: "cancel" },
+        ]
+    );
+};
+
+/**
+ * Processes an image by resizing, compressing, and adding a cache-busting query parameter.
+ *
+ * This function takes an image URI, resizes the image to a maximum width of 800 pixels,
+ * compresses it to reduce file size, and ensures the image is saved in JPEG format.
+ * Additionally, a cache-busting timestamp is appended to the output URI to prevent
+ * caching issues.
+ *
+ * @param {string} uri - The URI of the image to process.
+ * @returns {Promise<string>} A promise that resolves to the processed image URI with a cache-busting query parameter.
+ */
+const processImage = async (uri) => {
+    // Verklein en comprimeer de afbeelding om sneller te laden
+    const manipulated = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 800 } }], // Max 800px breed
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+    );
+
+    // Voeg cache-busting toe
+    return manipulated.uri + `?t=${Date.now()}`;
+};
+
+/**
+ * Asynchronously opens the device's image library, allowing the user to select and upload an image with optional editing.
+ *
+ * This function requests the necessary permissions to access the media library and handles cases where the permissions are not granted.
+ * After the user selects an image, it processes the image and uploads it using the provided setter functions.
+ *
+ * @param {Function} setImageUri - A callback function to set the URI of the selected image after processing.
+ * @param {Function} setData - A callback function to set the state or data after uploading the image.
+ * @param {Function} setUploading - A callback function to handle the uploading state.
+ * @throws Will alert the user if the media library permissions are not granted.
+ */
+const openImageLibrary = async (setImageUri, setData, setUploading) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+        Alert.alert("Permission required", "Je moet toegang geven tot de fotobibliotheek.");
+        return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: [ImagePicker.MediaType.Image],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+        cropperCircleOverlay: true,
+    });
+
+    if (!result.canceled) {
+        const uri = await processImage(result.assets[0].uri);
+        setImageUri(uri);
+        await uploadImage(result.assets[0].uri, setData, setUploading);
+    }
+};
+
+/**
+ * Opens the device's camera to capture an image, processes the captured photo, and uploads the image.
+ *
+ * This function first requests camera permissions from the user. If permissions are denied,
+ * an alert dialog is displayed informing the user that camera access is required. If permissions are
+ * granted, the camera is launched for the user to take a photo.
+ *
+ * After capturing an image, the function processes the image URI, sets the processed image URI
+ * using the provided setImageUri function, and uploads the image using the provided setData and
+ * setUploading functions.
+ *
+ * @async
+ * @function openCamera
+ * @param {Function} setImageUri - A callback function to set the processed image URI.
+ * @param {Function} setData - A callback function to update the upload data state.
+ * @param {Function} setUploading - A callback function to update the uploading state.
+ * @throws {Error} Throws an error if there's an issue with processing or uploading the image.
+ */
+const openCamera = async (setImageUri, setData, setUploading) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+        Alert.alert("Permission required", "Je moet toegang geven tot de camera.");
+        return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        cropperCircleOverlay: true,
+    });
+
+    if (!result.canceled) {
+        const uri = await processImage(result.assets[0].uri);
+        setImageUri(uri);
+        await uploadImage(result.assets[0].uri, setData, setUploading);
+    }
+};
+/**
  * Asynchronously uploads an image to a specified server endpoint.
  *
  * @param {string} uri - The URI of the image file to be uploaded.
+ * @param setData
+ * @param setUploading
  * @returns {Promise<void>} A promise that resolves when the image is successfully uploaded or rejects if an error occurs.
  *
  * This function handles image upload by:
@@ -164,11 +301,11 @@ export const selectAndUploadImage = async (setImageUri, setData, setUploading) =
  * Note: The URI should correspond to an existing image in the specified format (e.g., "image/jpeg").
  */
 export const uploadImage = async (uri, setData, setUploading) => {
-    // Prepare form data
+    // Prepare for data
     const formData = new FormData();
     formData.append("file", {
         uri,
-        type: "image/jpeg", // Change based on actual type
+        type: "image/jpeg", // Change based on the actual type
         name: "upload.jpg",
     });
 
@@ -192,7 +329,6 @@ export const uploadImage = async (uri, setData, setUploading) => {
         }
         setData(jsonData);
     } catch (error) {
-        console.log(error);
         Alert.alert("Upload Error", error.message);
     } finally {
         setUploading(false);
@@ -218,10 +354,19 @@ export const fetchData = async (setData, setError, setLoading) => {
     } catch (error) {
         setError(error.message || 'Something went wrong!');
     } finally {
-        setLoading(false); // Stop loading after the fetch is complete
+        setLoading(false);
     }
 };
 
+/**
+ * Fetches a list of models from the API.
+ *
+ * This asynchronous function retrieves model data from a specified API endpoint and manages tokens, errors, and loading state. The data is fetched using a GET request with an authorization token obtained from AsyncStorage.
+ *
+ * @param {Function} setData - A callback function to handle and store successfully fetched data.
+ * @param {Function} setError - A callback function to handle and store error messages in case of failures.
+ * @param {Function} setLoading - A callback function to manage the loading state. This will be set to false after the operation completes, regardless of success or failure.
+ */
 export const fetchModelLists= async (setData, setError, setLoading) => {
     const token = await AsyncStorage.getItem('token');
     const apiUrl = Config.API_BASE_URL + '/api/model-lists';
@@ -229,19 +374,143 @@ export const fetchModelLists= async (setData, setError, setLoading) => {
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
             },
         });
         if (!response) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
         const jsonData = await response.json();
-        console.log(jsonData);
         setData(jsonData);
     } catch (error) {
         setError(error.message || 'Something went wrong!');
     } finally {
         setLoading(false); // Stop loading after the fetch is complete
     }
+};
+
+/**
+ * Opens the camera on the user's device to capture an image without uploading it.
+ *
+ * This function requests camera permissions from the user and, if granted, launches the camera
+ * to allow the user to take a photo. The photo can then be edited before being finalized.
+ * If the permission is denied, an alert is displayed and the function returns an object
+ * indicating the operation was cancelled.
+ *
+ * @async
+ * @function
+ * @returns {Promise<Object>} A promise that resolves to an object containing details of the captured image
+ * or an object with { cancelled: true } if the operation was cancelled.
+ */
+export const openCameraWithoutUpload = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+        alert('Camera permission is required!');
+        return { cancelled: true };
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+    });
+
+    return result;
+};
+
+/**
+ * Opens the device's image library to allow the user to select an image without uploading it.
+ *
+ * This function requests permission to access the media library. If the permission is denied,
+ * an alert is displayed to inform the user, and the function returns an object indicating the operation
+ * was cancelled. If the permission is granted, the function launches the device's image library where the
+ * user can select an image. The selected image can be edited according to specified options,
+ * such as aspect ratio and quality.
+ *
+ * @async
+ * @function
+ * @returns {Promise<object>} A promise that resolves to an object containing details of the selected image, or
+ * an object with a `cancelled` property set to `true` if the user did not grant permission or cancelled the operation.
+ */
+export const openImageLibraryWithoutUpload = async () => {
+
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+        alert('Media library permission is required!');
+        return { cancelled: true };
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+    });
+
+    return result;
+};
+
+/**
+ * Prompts the user to select an option for obtaining an image.
+ * Displays an alert with options to either take a photo using the camera,
+ * pick an image from the library, or cancel the operation. The method returns
+ * a promise that resolves to the selected image data or an indication that
+ * the operation was canceled.
+ *
+ * @function
+ * @returns {Promise<Object>} A promise that resolves to an object containing the image data
+ * or an object with a cancelled flag when the user cancels the operation.
+ */
+export const selectImage = () => {
+    return new Promise((resolve) => {
+        Alert.alert(
+            "Kies een optie",
+            "Wil je een foto nemen of kiezen uit de bibliotheek?",
+            [
+                { text: "Camera", onPress: async () => resolve(await openCameraWithoutUpload()) },
+                { text: "Bibliotheek", onPress: async () => resolve(await openImageLibraryWithoutUpload()) },
+                { text: "Annuleer", style: "cancel", onPress: () => resolve({ cancelled: true }) },
+            ]
+        );
+    });
+};
+
+// Delete button
+export const confirmDelete = (setLoading, navigation) => {
+    Alert.alert(
+        "Delete Profile",
+        "Are you sure you want to delete your profile?",
+        [
+            {
+                text: "No",
+                style: "cancel",
+            },
+            {
+                text: "Yes",
+                onPress: () =>
+                    handleSubmitDeleteProfile(setLoading, navigation),
+            },
+        ],
+        { cancelable: true }
+    );
+};
+
+export const confirmation = (setLoading, navigation) => {
+    Alert.alert(
+        "Delete Profile",
+        "Are you sure you want to delete your profile?",
+        [
+            {
+                text: "No",
+                style: "cancel",
+            },
+            {
+                text: "Yes",
+                onPress: () =>
+                    navigation.navigate("Login"),
+            },
+        ],
+        { cancelable: true }
+    );
 };

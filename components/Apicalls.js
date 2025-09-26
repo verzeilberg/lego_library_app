@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Config from '../config/config'; // Adjust the path based on your project structure
+import Config from '../config/config';
+import {Alert} from "react-native";
 
 /**
  * Handles the submission of login credentials by making a POST request to the login API.
@@ -25,8 +26,11 @@ export const handleSubmitLogin = async (email, password, navigation, setErrorMes
         });
 
         const result = await response.json();
-        if (response.ok && result.token) {
+        if (response.ok && result.token && result.refresh_token) {
+            // Store both tokens
             await AsyncStorage.setItem('token', result.token);
+            await AsyncStorage.setItem('refresh_token', result.refresh_token);
+
             navigation.navigate('Profile');
         } else {
             setErrorMessage('Login unsuccessful: ' + (result.error || 'Unknown error'));
@@ -79,6 +83,7 @@ export const handleSubmitRegistration = (firstname, lastname, email, password, s
                 } else {
                     const token = result.token;
                     AsyncStorage.setItem('activation-token', token);
+                    console.log('asdadasd');
                     navigation.navigate('ActivateAccount');
                 }
             })
@@ -121,8 +126,8 @@ export const handleCodeSubmit = async (code, navigation, setErrorMessage) => {
                 setErrorMessage('Error checking token and code');
             });
 
-    } catch (err) {
-        setErrorMessage(err.message);
+    } catch (error) {
+        setErrorMessage(error.message);
     }
 };
 
@@ -162,11 +167,11 @@ export const handlePasswordSubmit = async (password, navigation) => {
                 navigation.navigate('Login');
             })
             .catch(error => {
-                console.error('Error saving:', error);
+                Alert.alert('Error saving:', error);
             });
 
     } catch (err) {
-        console.log(err.message);
+        Alert.alert(err.message);
     }
 };
 
@@ -234,44 +239,229 @@ export const handleForgotPasswordCodeSubmit = async (code, setErrorMessage, navi
         setErrorMessage(err.message);
     }
 };
+export const handleSubmitAddBoard = async (
+    title,
+    description,
+    public_private,
+    selectedImage,
+    setErrorMessage,
+    setModalVisible,
+    onDataUpdated
+) => {
+    const apiUrl = Config.API_BASE_URL + '/api/model-list';
+    const token = await AsyncStorage.getItem('token');
 
-export const handleSubmitAddBoard = (name, description, public_private, setErrorMessage, navigation) => {
-    // API endpoint for registration
-    const apiUrl = Config.API_BASE_URL+'/api/public/user/register';
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('publicPrivate', public_private);
 
-    // Sending json data
-    const data = {
-        firstName: firstname,
-        lastName: lastname,
-        email: email,
-        plainPassword: password
-    };
+    // Only append image if one is selected
+    if (selectedImage) {
+        // Make sure selectedImage is a URI like "file:///..."
+        const filename = selectedImage.split('/').pop(); // get file name
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        formData.append('file', {
+            uri: selectedImage,
+            type: type,
+            name: filename,
+        });
+    }
 
     try {
-        fetch(apiUrl, {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token,
+                // Do NOT set 'Content-Type' with FormData; fetch handles it
             },
-            body: JSON.stringify(data)
-        })
-            .then(response => response.json())
-            .then(result => {
-                const message = result.detail;
-                if (message) {
-                    setErrorMessage('Registration unsuccesfull: \n' + result.detail);
-                } else {
-                    const token = result.token;
-                    AsyncStorage.setItem('activation-token', token);
-                    navigation.navigate('ActivateAccount');
-                }
-            })
-            .catch(error => {
-                console.error('Error registering:', error);
-            });
+            body: formData,
+        });
 
-    } catch (err) {
-        console.error(err.message);
+        const result = await response.json();
+
+        if (result.message) {
+            setErrorMessage('Add board unsuccessful: \n' + result.message);
+        } else {
+            onDataUpdated();
+            setModalVisible(false);
+        }
+    } catch (error) {
+        console.error('Error adding board:', error);
+        setErrorMessage('Error adding board: ' + error.message);
     }
 };
 
+export const handleSubmitEditProfile = async (
+    userName,
+    firstName,
+    lastName,
+    bio,
+    selectedImage,
+    setErrorMessage,
+    setData,
+    setIsEditing,
+    setLoading,
+    navigation
+) => {
+    try {
+        const apiUrl = Config.API_BASE_URL + '/api/user-data/edit';
+        const token = await AsyncStorage.getItem('token');
+
+        const formData = new FormData();
+        formData.append('userName', userName);
+        formData.append('firstName', firstName);
+        formData.append('lastName', lastName);
+        formData.append('bio', bio);
+
+        if (selectedImage) {
+            const filename = selectedImage.split('/').pop();
+            const match = /\.(\w+)$/.exec(filename);
+            const type = match ? `image/${match[1]}` : 'image/jpeg';
+            formData.append('file', { uri: selectedImage, type, name: filename });
+        } else {
+            formData.append('file', '');
+        }
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json', // ✅ expect JSON back
+                // DO NOT set Content-Type, fetch will handle multipart boundaries
+            },
+            body: formData,
+        });
+
+        const result = await response.json(); // returns the parsed JSON
+        if (result.message) {
+            setErrorMessage('Edit profile unsuccessful: ' + result.message);
+        } else {
+            setData(result); // update state in ProfileScreen
+            setIsEditing(false);
+            setLoading(false);
+        }
+    } catch (error) {
+        console.error('Error editing profile:', error);
+        setErrorMessage('Error editing profile: \n' + error.message);
+    }
+};
+
+export const handleSubmitDeleteProfile = async (setLoading, navigation, setErrorMessage) => {
+    try {
+        setLoading(true);
+        const apiUrl = Config.API_BASE_URL + '/api/user-data/delete';
+        const token = await AsyncStorage.getItem('token');
+
+        const response = await fetch(apiUrl, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+            },
+        });
+
+        const result = await response.json();
+
+
+
+        if (result.message) {
+            console.log(result.message);
+            setErrorMessage('Delete profile unsuccessful: ' + result.message);
+        } else {
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('refresh_token');
+
+            // Show alert
+            Alert.alert(
+                'Account Deleted',
+                'Your account has been successfully deleted.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => navigation.navigate('Login'),
+                    },
+                ],
+                { cancelable: false }
+            );
+        }
+    } catch (error) {
+        setErrorMessage('Error deleting profile: \n' + error.message);
+    } finally {
+        setLoading(false);
+    }
+};
+
+/**
+ * Asynchronously refreshes an authentication token using a refresh token stored in local storage.
+ *
+ * The function retrieves the refresh token from async storage and sends it to the server to obtain a new access token.
+ * If successful, it updates the stored tokens (access token and refresh token) in async storage. If the refresh token
+ * is unavailable or if the server response is invalid, the function returns null.
+ *
+ * @returns {Promise<string|null>} A promise resolving to the new access token if successful, or null if refresh fails.
+ *
+ * @throws {Error} Logs an error if an issue occurs during refresh operations, such as network errors.
+ */
+export const refreshToken = async () => {
+    try {
+        const refresh = await AsyncStorage.getItem("refresh_token");
+        if (!refresh) return null;
+
+        const apiUrl = `${Config.API_BASE_URL}/api/token/refresh`;
+
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken: refresh }),
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json();
+        // Save both new access + refresh tokens
+        await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("refresh_token", data.refreshToken);
+
+        return data.token;
+    } catch (e) {
+        console.error("Error refreshing token", e);
+        return null;
+    }
+};
+
+
+export const logout = async (logoutAll = false, navigation) => {
+    const refresh = await AsyncStorage.getItem("refresh_token");
+    const token = await AsyncStorage.getItem("token");
+
+    const apiUrl = `${Config.API_BASE_URL}/api/logout`
+
+    // Call backend to revoke token(s)
+    const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+            refreshToken: refresh,
+            allDevices: logoutAll,
+        }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        Alert.alert("Logout failed:", data);
+    }
+
+    // Clear local storage
+    await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("refresh_token");
+
+    navigation.navigate('Login');
+};
