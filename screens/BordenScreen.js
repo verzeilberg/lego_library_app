@@ -1,18 +1,28 @@
-import {View, Text, Image, ScrollView} from "react-native";
+import {View, Text, Image, FlatList, TouchableOpacity, Button, Dimensions} from "react-native";
 import React, {useEffect, useState} from 'react';
-import LoadingSpinner from "../components/Elements";
 import {globalStyles} from "../styles";
-import {checkToken, fetchData, fetchModelLists, selectAndUploadImage} from "../components/Functions";
+import { fetchModelLists} from "../components/Functions";
 import Config from "../config/config";
 import AddModal from "../components/AddModal";
+import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 
-export default function BordenScreen({navigation}) {
+export default function BordenScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [data, setData] = useState(null); // To store the fetched data
-    const [loading, setLoading] = useState(true); // To show loading spinner
-    const [error, setError] = useState(null); // To handle errors
-    const [errorMessage, setErrorMessage] = useState(null);
+    const [viewType, setViewType] = useState('list'); // 'list' or 'grid'
+    const [modalVisible, setModalVisible] = useState(false);
+
+    //Card dimension
+    const screenWidth = Dimensions.get('window').width;
+    const cardMargin = 16; // margin/padding from globalStyles
+    const gridSpacing = 8;  // space between grid cards
+    const numColumns = viewType === 'grid' ? 2 : 1;
+    const cardWidth = (screenWidth - cardMargin * 2 - gridSpacing * (numColumns - 1)) / numColumns;
+    //Card text dimension
+    const scaleText = (baseSize) => Math.max(12, Math.min(baseSize, cardWidth / 10));
+
     const reloadData = () => {
-        fetchModelLists(setData, setError, setLoading);
+        setGlobalLoading(true);
+        fetchModelLists(setData, setGlobalError, setGlobalLoading);
     };
 
     /** Check token when the page is loaded **/
@@ -20,34 +30,99 @@ export default function BordenScreen({navigation}) {
         reloadData();
     }, []);
 
-    //If loading show spinner
-    if (loading) {
-        return <LoadingSpinner/>;
-    }
+    const renderItem = ({ item }) => (
+        <TouchableOpacity
+            style={[
+                globalStyles.card,
+                viewType === 'grid' && { flex: 1, margin: gridSpacing }
+            ]}
+            onPress={() => navigation.navigate('Bord', { item })}
+            activeOpacity={0.8}
+        >
+            <Image
+                source={{ uri: Config.API_BASE_URL + item.filePath }}
+                style={globalStyles.modelListImage}
+            />
+            <Text style={[
+                globalStyles.titleText,
+                { fontSize: scaleText(16) } // dynamically scaled
+            ]}>
+                {item.title}
+            </Text>
+            <Text style={[
+                globalStyles.descriptionText,
+                { fontSize: scaleText(14) } // dynamically scaled
+            ]}>
+                {item.description}
+            </Text>
+        </TouchableOpacity>
+    );
 
-    if (error) {
-        return <Text>Error: {error}</Text>;
-    }
+
+
 
     return (
-        <View style={{flex: 1}}>
-            <ScrollView contentContainerStyle={globalStyles.listContainer}>
-                {data.length > 0 ? (
-                    data.map(item => (
-                        <View key={item.id} style={globalStyles.card}>
-                            <Image source={{uri: Config.API_BASE_URL + item.filePath}}
-                                   style={globalStyles.modelListImage}/>
-                            <Text style={globalStyles.titleText}>{item.title}</Text>
-                            <Text style={globalStyles.descriptionText}>{item.description}</Text>
-                        </View>
-                    ))
-                ) : (
+        <View style={{ flex: 1 }}>
+            {/* Toggle Buttons */}
+            <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginVertical: 10,
+                paddingHorizontal: 16
+            }}>
+                {/* Left: Grid/List toggle */}
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity onPress={() => setViewType('list')} style={{ marginRight: 10 }}>
+                        <FontAwesome
+                            name="list"
+                            size={24}
+                            color={viewType === 'list' ? 'blue' : 'gray'}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setViewType('grid')}>
+                        <FontAwesome
+                            name="th-large"
+                            size={24}
+                            color={viewType === 'grid' ? 'blue' : 'gray'}
+                        />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Right: Add new list item */}
+                <TouchableOpacity
+                    onPress={() => {
+                        // Open modal
+                        setModalVisible(true);
+                    }}
+                    style={{ padding: 6 }}
+                >
+                    <MaterialIcons name="playlist-add" size={28} color="green" />
+                </TouchableOpacity>
+            </View>
+
+            {/* Item List / Grid */}
+            <FlatList
+                data={data}
+                key={viewType} // forces re-render on toggle
+                keyExtractor={(item) => item.id.toString()}
+                numColumns={viewType === 'grid' ? 2 : 1}
+                contentContainerStyle={globalStyles.listContainer}
+                renderItem={renderItem}
+                ListEmptyComponent={() => (
                     <View>
                         <Text style={globalStyles.titleText}>No data available</Text>
                     </View>
                 )}
-            </ScrollView>
-            <AddModal onDataUpdated={reloadData} />
+            />
+
+            <AddModal
+                modalVisible={modalVisible}
+                setModalVisible={setModalVisible}
+                onDataUpdated={reloadData}
+                setGlobalError={setGlobalError}
+                setGlobalLoading={setGlobalLoading}
+            />
         </View>
     );
 

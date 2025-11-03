@@ -36,11 +36,12 @@ export const handleKeyPress = (e, index, code, inputRefs) => {
  * @async
  * @throws {Error} If there's an issue retrieving or decoding the token, or during token refresh operations.
  */
-export const checkToken = async (navigation, setErrorMessage, setLoading) => {
+export const checkToken = async (navigation, setGlobalError, setGlobalLoading) => {
     try {
         const token = await AsyncStorage.getItem("token");
 
         if (!token) {
+            setGlobalLoading(false);
             navigation.navigate("Login");
             return;
         }
@@ -54,23 +55,24 @@ export const checkToken = async (navigation, setErrorMessage, setLoading) => {
         if (decoded.exp && decoded.exp < now) {
             // Try to refresh the token
             const newToken = await refreshToken(token);
-
             if (newToken) {
                 await AsyncStorage.setItem("token", newToken);
-                navigation.navigate("Profile");
+                setGlobalLoading(false);
+                navigation.replace("MainTabs");
             } else {
                 await AsyncStorage.removeItem("token");
+                setGlobalLoading(false);
                 navigation.navigate("Login");
             }
         } else {
-            setErrorMessage(null);
-            navigation.navigate("Profile");
+            setGlobalError(null);
+            setGlobalLoading(false);
+            navigation.replace("MainTabs");
         }
     } catch (error) {
-        console.error("Error checking token", error);
         navigation.navigate("Login");
     } finally {
-        setLoading(false);
+        setGlobalLoading(false);
     }
 };
 
@@ -114,13 +116,13 @@ export const handleGeneratePassword = (setPassword) => {
  *
  * @param {string} password - The main password.
  * @param {string} confirmPassword - The password to confirm.
- * @param {function} setError - Function to set the error or success message.
+ * @param setGlobalError
  */
-export const checkPassword = (password, confirmPassword, setErrorMessage) => {
+export const checkPassword = (password, confirmPassword, setGlobalError) => {
     if (password === confirmPassword && password.length > 0) {
         return true;
     } else {
-        setErrorMessage('Passwords do not match!');
+        setGlobalError('Passwords do not match!');
         return false;
     }
 };
@@ -335,7 +337,7 @@ export const uploadImage = async (uri, setData, setUploading) => {
     }
 };
 
-export const fetchData = async (setData, setError, setLoading) => {
+export const fetchData = async (setData, setGlobalError, setGlobalLoading) => {
     const token = await AsyncStorage.getItem('token');
     const apiUrl = Config.API_BASE_URL + '/api/user-data';
     try {
@@ -347,14 +349,14 @@ export const fetchData = async (setData, setError, setLoading) => {
             },
         });
         if (!response) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            setGlobalError(`HTTP error! Status: ${response.status}`);
         }
         const jsonData = await response.json();
         setData(jsonData);
     } catch (error) {
-        setError(error.message || 'Something went wrong!');
+        setGlobalError(error.message || 'Something went wrong!');
     } finally {
-        setLoading(false);
+        setGlobalLoading(false);
     }
 };
 
@@ -364,10 +366,10 @@ export const fetchData = async (setData, setError, setLoading) => {
  * This asynchronous function retrieves model data from a specified API endpoint and manages tokens, errors, and loading state. The data is fetched using a GET request with an authorization token obtained from AsyncStorage.
  *
  * @param {Function} setData - A callback function to handle and store successfully fetched data.
- * @param {Function} setError - A callback function to handle and store error messages in case of failures.
- * @param {Function} setLoading - A callback function to manage the loading state. This will be set to false after the operation completes, regardless of success or failure.
+ * @param setGlobalError
+ * @param setGlobalLoading
  */
-export const fetchModelLists= async (setData, setError, setLoading) => {
+export const fetchModelLists= async (setData, setGlobalError, setGlobalLoading) => {
     const token = await AsyncStorage.getItem('token');
     const apiUrl = Config.API_BASE_URL + '/api/model-lists';
     try {
@@ -384,9 +386,10 @@ export const fetchModelLists= async (setData, setError, setLoading) => {
         const jsonData = await response.json();
         setData(jsonData);
     } catch (error) {
-        setError(error.message || 'Something went wrong!');
+        setGlobalError(error.message || 'Something went wrong!');
+        setGlobalLoading(false)
     } finally {
-        setLoading(false); // Stop loading after the fetch is complete
+        setGlobalLoading(false); // Stop loading after the fetch is complete
     }
 };
 
@@ -477,7 +480,7 @@ export const selectImage = () => {
 };
 
 // Delete button
-export const confirmDelete = (setLoading, navigation) => {
+export const confirmDelete = (setGlobalLoading, setGlobalError, navigation) => {
     Alert.alert(
         "Delete Profile",
         "Are you sure you want to delete your profile?",
@@ -489,26 +492,7 @@ export const confirmDelete = (setLoading, navigation) => {
             {
                 text: "Yes",
                 onPress: () =>
-                    handleSubmitDeleteProfile(setLoading, navigation),
-            },
-        ],
-        { cancelable: true }
-    );
-};
-
-export const confirmation = (setLoading, navigation) => {
-    Alert.alert(
-        "Delete Profile",
-        "Are you sure you want to delete your profile?",
-        [
-            {
-                text: "No",
-                style: "cancel",
-            },
-            {
-                text: "Yes",
-                onPress: () =>
-                    navigation.navigate("Login"),
+                    handleSubmitDeleteProfile(setGlobalLoading, setGlobalError, navigation)
             },
         ],
         { cancelable: true }

@@ -1,19 +1,18 @@
 import React, {useEffect, useState} from 'react';
-import {View, TextInput, Button, StyleSheet, Text, Pressable, TouchableOpacity} from 'react-native';
+import {View, TextInput, Button, Text, Pressable, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { handleGeneratePassword, togglePasswordVisibility, checkPassword } from '../components/Functions';
 import {handleSubmitRegistration} from '../components/Apicalls'
 import LoadingSpinner from '../components/Elements';
 import { globalStyles } from '../styles';
 
-export default function RegistrationScreen({navigation}) {
+export default function RegistrationScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [firstname, setFirstname] = useState('');
     const [lastname, setLastname] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(true);
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [errorMessage, setErrorMessage] = useState(null);
     const [isSecure, setIsSecure] = useState(true);
 
     useEffect(() => {
@@ -80,17 +79,13 @@ export default function RegistrationScreen({navigation}) {
             <View style={globalStyles.buttonContainer}>
                 <Button title="Generate Password" onPress={() => handleGeneratePassword(setPassword)}/>
             </View>
-
-            {/* Conditionally render error message */}
-            {errorMessage && (
-                <Text style={globalStyles.errorText}>{errorMessage}</Text>
-            )}
             <Pressable
                 style={globalStyles.button}
                 onPress={() => {
-                    const doPasswordMatch = checkPassword(password, confirmPassword, setErrorMessage);
+                    const doPasswordMatch = checkPassword(password, confirmPassword, setGlobalError);
                     if (doPasswordMatch) {
-                        handleSubmitRegistration(firstname, lastname, email, password, setErrorMessage, navigation);
+                        setGlobalLoading(true);
+                        handleSubmitRegistration(firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation);
                     }
 
             }}

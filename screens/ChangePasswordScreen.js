@@ -5,10 +5,9 @@ import {checkPassword, handleGeneratePassword, togglePasswordVisibility} from ".
 import {handlePasswordSubmit} from "../components/Apicalls";
 import {globalStyles} from "../styles";
 
-export default function ChangePasswordScreen({route, navigation}) {
+export default function ChangePasswordScreen({route, navigation, setGlobalError, setGlobalLoading}) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [errorMessage, setErrorMessage] = useState(null);
     const [isSecure, setIsSecure] = useState(true);
 
     return (
@@ -43,16 +42,13 @@ export default function ChangePasswordScreen({route, navigation}) {
                 <Button title="Generate Password" onPress={() => handleGeneratePassword(setPassword)}/>
             </View>
 
-            {/* Conditionally render error message */}
-            {errorMessage && (
-                <Text style={globalStyles.errorText}>{errorMessage}</Text>
-            )}
             <Pressable
                 style={globalStyles.button}
                 onPress={() => {
-                    const doPasswordMatch = checkPassword(password, confirmPassword, setErrorMessage);
+                    const doPasswordMatch = checkPassword(password, confirmPassword, setGlobalError);
                     if (doPasswordMatch) {
-                        handlePasswordSubmit(password, navigation)
+                        setGlobalLoading(true);
+                        handlePasswordSubmit(password, navigation, setGlobalError, setGlobalLoading)
                     }
                 }}
             >

@@ -4,24 +4,17 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import {globalStyles} from '../styles';
 import {checkToken, togglePasswordVisibility} from '../components/Functions';
 import {handleSubmitLogin} from '../components/Apicalls'
-import LoadingSpinner from '../components/Elements';
 
-export default function LoginScreen({navigation}) {
+export default function LoginScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [errorMessage, setErrorMessage] = useState(null);
     const [isSecure, setIsSecure] = useState(true);
 
     /** Check token when the page is loaded **/
     useEffect(() => {
-        checkToken(navigation, setErrorMessage, setLoading);
+        setGlobalLoading(true);
+        checkToken(navigation, setGlobalError, setGlobalLoading);
     }, []);
-
-    //If loading show spinner
-    if (loading) {
-        return <LoadingSpinner/>;
-    }
 
     return (
         <KeyboardAvoidingView
@@ -63,13 +56,9 @@ export default function LoginScreen({navigation}) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Conditionally render error message */}
-                {errorMessage && (
-                    <Text style={globalStyles.errorText}>{errorMessage}</Text>
-                )}
                 <Pressable
                     style={globalStyles.button}
-                    onPress={() => handleSubmitLogin(email, password, navigation, setErrorMessage)}
+                    onPress={() => handleSubmitLogin(email, password, navigation, setGlobalError)}
                 >
                     <Text style={globalStyles.text}>Login</Text>
                 </Pressable>

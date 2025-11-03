@@ -5,11 +5,14 @@ export const globalStyles = StyleSheet.create({
       flex:1
     },
     container: {
-        marginTop: 15,
+        marginTop: 20,
         marginHorizontal: 20,
         flex: 0,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    tabNavigator: {
+      paddingTop: 150,
     },
     row: {
         flexDirection: 'row',
@@ -134,17 +137,17 @@ export const globalStyles = StyleSheet.create({
         color: '#666',
     },
     titleText: {
-        fontSize: 24,
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
         marginBottom: 8,
-        textAlign: 'center',
+        marginLeft:8,
+
     },
     descriptionText: {
-        fontSize: 18,
-        color: '#333',
+        fontSize: 14,
+        color: '#555',
         marginBottom: 8,
-        textAlign: 'center',
+        marginLeft:8,
     },
     imageRoundContainer: {
         width: 150,

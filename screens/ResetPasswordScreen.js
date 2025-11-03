@@ -4,10 +4,9 @@ import {globalStyles} from "../styles";
 import {handleChange, handleKeyPress} from "../components/Functions";
 import {handleForgotPasswordCodeSubmit} from "../components/Apicalls";
 
-export default function FourDigitCodeInput({navigation}) {
+export default function FourDigitCodeInput({navigation, setGlobalError, setGlobalLoading}) {
     const [code, setCode] = useState(['', '', '', '']);
     const inputRefs = useRef([]);
-    const [errorMessage, setErrorMessage] = useState(null);
 
     return (
         <View style={globalStyles.container}>
@@ -26,13 +25,12 @@ export default function FourDigitCodeInput({navigation}) {
                     />
                 ))}
             </View>
-            {/* Conditionally render error message */}
-            {errorMessage && (
-                <Text style={globalStyles.errorText}>{errorMessage}</Text>
-            )}
             <Pressable
                 style={globalStyles.button}
-                onPress={() => handleForgotPasswordCodeSubmit(code, setErrorMessage, navigation)}
+                onPress={() => {
+                    setGlobalLoading(true);
+                    handleForgotPasswordCodeSubmit(code, setGlobalError, navigation, setGlobalLoading)
+                }}
             >
                 <Text style={globalStyles.text}>Reset</Text>
             </Pressable>

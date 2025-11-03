@@ -1,17 +1,14 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, Image, TouchableOpacity, StyleSheet, Pressable, Alert} from 'react-native';
+import {View, Text, Image, TouchableOpacity, StyleSheet, Pressable} from 'react-native';
 import Config from "../config/config";
 import {globalStyles} from '../styles';
 import {fetchData, confirmDelete, selectImage} from "../components/Functions";
-import LoadingSpinner from "../components/Elements";
 import FloatingLabelInput from "../components/FloatingLabelInput";
 import {handleSubmitEditProfile} from "../components/Apicalls";
 import Icon from "react-native-vector-icons/FontAwesome";
 
-const ProfileScreen = ({navigation}) => {
+const ProfileScreen = ({navigation, setGlobalLoading, setGlobalError}) => {
     const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [errorMessage, setErrorMessage] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const pickImage = async () => {
@@ -28,7 +25,8 @@ const ProfileScreen = ({navigation}) => {
     const [profilePicture, setProfilePicture] = useState('');
 
     useEffect(() => {
-        fetchData(setData, setError, setLoading);
+        setGlobalLoading(true);
+        fetchData(setData, setGlobalError, setGlobalLoading);
     }, []);
 
     // When data is loaded, initialize editable fields
@@ -41,14 +39,6 @@ const ProfileScreen = ({navigation}) => {
             setProfilePicture(`${Config.API_BASE_URL + data.profilePicture}?t=${Date.now()}`);
         }
     }, [data]);
-
-    if (loading) {
-        return <LoadingSpinner/>;
-    }
-
-    if (error) {
-        return <Text>Error: {error}</Text>;
-    }
 
     return (
         <View style={globalStyles.container}>
@@ -113,8 +103,8 @@ const ProfileScreen = ({navigation}) => {
                     <Pressable
                         style={globalStyles.button}
                         onPress={() => {
-                            setLoading(true);
-                            handleSubmitEditProfile(userName, firstName, lastName, bio, profilePicture, setErrorMessage, setData, setIsEditing, setLoading, navigation)
+                            setGlobalLoading(true);
+                            handleSubmitEditProfile(userName, firstName, lastName, bio, profilePicture, setGlobalError, setData, setIsEditing, setGlobalLoading, navigation)
                         }}
                     >
                         <Text style={globalStyles.text}>Save</Text>
@@ -137,7 +127,7 @@ const ProfileScreen = ({navigation}) => {
                     </Pressable>
                     <Pressable
                         style={globalStyles.button}
-                        onPress={() => confirmDelete(setLoading, navigation)}
+                        onPress={() => confirmDelete(setGlobalLoading, setGlobalError, navigation)}
                     >
                         <View style={globalStyles.inputContainer}>
                             <Text style={globalStyles.text}>Delete</Text>
@@ -146,6 +136,11 @@ const ProfileScreen = ({navigation}) => {
                     </Pressable>
 
                 </>
+            )}
+
+            {/* Conditionally render error message */}
+            {errorMessage && (
+                <Text style={globalStyles.errorText}>{errorMessage}</Text>
             )}
         </View>
     );

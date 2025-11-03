@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import {View, Modal} from 'react-native';
 import LottieView from 'lottie-react-native';
 import spinner from '../components/spinners/spinner.json';
 
@@ -7,17 +7,33 @@ import spinner from '../components/spinners/spinner.json';
  * LoadingSpinner Component
  * Displays a centered loading spinner.
  *
- * @param {string} size - The size of the spinner ('small' | 'large'). Default is 'large'.
- * @param {string} color - The color of the spinner. Default is '#0000ff'.
  */
-const LoadingSpinner = () => {
+const LoadingSpinner = ({ visible = false }) => {
     return (
-        <LottieView
-            source={spinner}
-            autoPlay
-            loop
-            style={{ width: 400, height: 400, margin:0, display: 'flex', justifyContent: 'center', alignItems: 'center'}}
-        />
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+        >
+            <View
+                style={{
+                    flex: 1,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                }}
+            >
+                <LottieView
+                    source={spinner}
+                    autoPlay
+                    loop
+                    style={{
+                        width: 200,
+                        height: 200,
+                    }}
+                />
+            </View>
+        </Modal>
     );
 };
 

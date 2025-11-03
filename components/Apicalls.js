@@ -13,9 +13,8 @@ import {Alert} from "react-native";
  * @param {function} setErrorMessage - Function to update the error message state.
  * @returns {Promise<void>} A promise that resolves when the login process is completed.
  */
-export const handleSubmitLogin = async (email, password, navigation, setErrorMessage) => {
+export const handleSubmitLogin = async (email, password, navigation, setGlobalError) => {
     const apiUrl = `${Config.API_BASE_URL}/api/login`;
-    setErrorMessage(null);
     const data = { email, password };
 
     try {
@@ -31,12 +30,12 @@ export const handleSubmitLogin = async (email, password, navigation, setErrorMes
             await AsyncStorage.setItem('token', result.token);
             await AsyncStorage.setItem('refresh_token', result.refresh_token);
 
-            navigation.navigate('Profile');
+            navigation.replace('MainTabs');
         } else {
-            setErrorMessage('Login unsuccessful: ' + (result.error || 'Unknown error'));
+            setGlobalError('Login unsuccessful: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
-        setErrorMessage('Error logging in: ' + error.message);
+        setGlobalError('Error logging in: ' + error.message);
     }
 };
 
@@ -47,7 +46,8 @@ export const handleSubmitLogin = async (email, password, navigation, setErrorMes
  * @param {string} lastname - The last name of the user.
  * @param {string} email - The email address of the user.
  * @param {string} password - The password of the user.
- * @param {function} setErrorMessage - Function to set and display an error message if registration fails.
+ * @param setGlobalError
+ * @param setGlobalLoading
  * @param {object} navigation - Navigation object used to navigate between screens in the application.
  *
  * Initiate a POST request to the registration API with user details included in the request body.
@@ -55,7 +55,7 @@ export const handleSubmitLogin = async (email, password, navigation, setErrorMes
  * If unsuccessful, set an error message using the `setErrorMessage` function.
  * Logs errors in the console in case of issues during the fetch or JSON parsing process.
  */
-export const handleSubmitRegistration = (firstname, lastname, email, password, setErrorMessage, navigation) => {
+export const handleSubmitRegistration = (firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation) => {
     // API endpoint for registration
     const apiUrl = Config.API_BASE_URL+'/api/public/user/register';
 
@@ -79,24 +79,45 @@ export const handleSubmitRegistration = (firstname, lastname, email, password, s
             .then(result => {
                 const message = result.detail;
                 if (message) {
-                    setErrorMessage('Registration unsuccesfull: \n' + result.detail);
+                    setGlobalError('Registration unsuccesfull: \n' + result.detail);
+                    setGlobalLoading(false);
                 } else {
                     const token = result.token;
                     AsyncStorage.setItem('activation-token', token);
-                    console.log('asdadasd');
+                    setGlobalLoading(false);
                     navigation.navigate('ActivateAccount');
                 }
             })
             .catch(error => {
-                console.error('Error registering:', error);
+                setGlobalLoading(false);
+                setGlobalError('Error registering: ' + error.text);
             });
 
     } catch (err) {
+        setGlobalLoading(false);
         console.error(err.message);
     }
 };
 
-export const handleCodeSubmit = async (code, navigation, setErrorMessage) => {
+/**
+ * Handles the submission of an activation code by making an API request
+ * to activate a user account.
+ *
+ * @async
+ * @function handleCodeSubmit
+ * @param {Array<string>} code - An array of strings representing the activation code digits.
+ * @param {Object} navigation - Navigation object used to redirect the user upon successful activation.
+ * @param setGlobalError
+ * @param setGlobalLoading
+ * @throws {Error} Throws an error if an issue occurs during the API call.
+ */
+export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlobalLoading) => {
+    const isValid = code.some(value => value.trim() !== "");
+    if (!isValid) {
+        setGlobalError('Code must be 4 digits');
+        return;
+    }
+
     // API endpoint for activation of the account
     const apiUrl = Config.API_BASE_URL + '/api/public/user/activate';
     const activationtoken = await AsyncStorage.getItem('activation-token')
@@ -116,18 +137,24 @@ export const handleCodeSubmit = async (code, navigation, setErrorMessage) => {
             .then(response => response.json())
             .then(result => {
                 if (result.token) {
-                    AsyncStorage.setItem('token', result.token)
-                    navigation.navigate('Profile');
+                    // Store both tokens
+                    AsyncStorage.setItem('token', result.token);
+                    AsyncStorage.setItem('refresh_token', result.refresh_token);
+                    setGlobalLoading(false);
+                    navigation.replace('MainTabs');
                 } else {
-                    setErrorMessage(result.message);
+                    setGlobalError(result.message);
+                    setGlobalLoading(false);
                 }
             })
             .catch(error => {
-                setErrorMessage('Error checking token and code');
+                setGlobalError('Error checking token and code');
+                setGlobalLoading(false);
             });
 
     } catch (error) {
-        setErrorMessage(error.message);
+        setGlobalError(error.message);
+        setGlobalLoading(false);
     }
 };
 
@@ -140,10 +167,12 @@ export const handleCodeSubmit = async (code, navigation, setErrorMessage) => {
  * @function
  * @param {string} password - The new password to update the user account.
  * @param {object} navigation - The navigation object for changing application screens.
+ * @param setGlobalError
+ * @param setGlobalLoading
  * @returns {Promise<void>} Resolves when the password update process completes.
  * @throws Logs errors if API call fails or navigation issues occur.
  */
-export const handlePasswordSubmit = async (password, navigation) => {
+export const handlePasswordSubmit = async (password, navigation, setGlobalError, setGlobalLoading) => {
     // API endpoint for registration
     const apiUrl = Config.API_BASE_URL+'/api/user/patch';
     const token = await AsyncStorage.getItem('reset-password-token');
@@ -164,20 +193,34 @@ export const handlePasswordSubmit = async (password, navigation) => {
             .then(response => response.json())
             .then(result => {
                 AsyncStorage.removeItem('reset-password-token');
+                setGlobalLoading(false);
                 navigation.navigate('Login');
             })
             .catch(error => {
-                Alert.alert('Error saving:', error);
+                setGlobalError('Error saving:', error);
+                setGlobalLoading(false);
             });
 
     } catch (err) {
-        Alert.alert(err.message);
+        setGlobalError(err.message);
+        setGlobalLoading(false);
     }
 };
 
-export const handleForgotPasswordSubmit = (email, setErrorMessage, navigation) => {
+/**
+ * Handles the submission of a forgot password request.
+ *
+ * This function sends a POST request to the API with the provided email to trigger the forgot password process.
+ * If the API returns a token, it stores the token in AsyncStorage and navigates to the ResetPassword screen.
+ * If an error occurs or the token is not provided, an error message is set using the `setErrorMessage` function.
+ *
+ * @param {string} email - The email address associated with the user's account.
+ * @param setGlobalError
+ * @param setGlobalLoading
+ * @param {object} navigation - Navigation object used to redirect the user to the ResetPassword screen.
+ */
+export const handleForgotPasswordSubmit = (email, setGlobalError, setGlobalLoading, navigation) => {
     const apiUrl = Config.API_BASE_URL+'/api/public/user/forgot-password';
-    setErrorMessage(null);
     // Assuming your API expects JSON data
     const data = {
         email: email
@@ -194,18 +237,43 @@ export const handleForgotPasswordSubmit = (email, setErrorMessage, navigation) =
         .then(result => {
             const token = result.token;
             if (token) {
+                setGlobalLoading(false)
                 AsyncStorage.setItem('reset-password-token', token);
+                setGlobalLoading(false);
                 navigation.navigate('ResetPassword');
             } else {
-                setErrorMessage(result.detail);
+                setGlobalError(result.message);
+                setGlobalLoading(false);
             }
         })
         .catch(error => {
-            setErrorMessage('Error login: ' + error.message);
+            setGlobalError('Error login: ' + error.message);
+            setGlobalLoading(false);
         });
 };
 
-export const handleForgotPasswordCodeSubmit = async (code, setErrorMessage, navigation) => {
+/**
+ * Handles the submission of the forgot password code.
+ *
+ * This function verifies the provided code by sending it to the server along with a token retrieved from storage.
+ * If successful, it updates the token and navigates to the "ChangePassword" screen. In case of an error,
+ * it updates the error message state.
+ *
+ * @param {string[]} code - An array of strings representing the forgot password code input by the user.
+ * @param setGlobalError
+ * @param {object} navigation - The navigation object used to redirect the user to screens within the application.
+ * @param setGlobalLoading
+ * @returns {Promise<void>} A promise that resolves when the code submission process completes.
+ */
+export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navigation, setGlobalLoading) => {
+
+    const isValid = code.some(value => value.trim() !== "");
+    if (!isValid) {
+        setGlobalError('Code must be 4 digits');
+        setGlobalLoading(false);
+        return;
+    }
+
     // API endpoint for registration
     const apiUrl = Config.API_BASE_URL + '/api/public/user/check-token-code';
     const token = await AsyncStorage.getItem('reset-password-token');
@@ -228,23 +296,46 @@ export const handleForgotPasswordCodeSubmit = async (code, setErrorMessage, navi
                     AsyncStorage.setItem('reset-password-token', result.token)
                     navigation.navigate('ChangePassword');
                 } else {
-                    setErrorMessage(result.message);
+                    setGlobalError(result.message);
                 }
             })
             .catch(error => {
-                setErrorMessage('Error checking token and code');
-            });
-
+                setGlobalError('Error checking token and code');
+            })
     } catch (err) {
-        setErrorMessage(err.message);
+        setGlobalError(err.message);
+    } finally
+    {
+        setGlobalLoading(false);
     }
 };
-export const handleSubmitAddBoard = async (
+/**
+ * Asynchronously handles the submission of a new board by sending provided
+ * details such as title, description, visibility, and an optional image
+ * to the server endpoint. Manages the state and UI updates based on the
+ * server's response.
+ *
+ * @param id
+ * @param {string} title - The title of the new board being created.
+ * @param {string} description - A description for the new board.
+ * @param {string} public_private - The visibility flag, typically "public" or "private".
+ * @param {string} [selectedImage] - The URI of the selected image file, if one is included.
+ * @param setGlobalError
+ * @param setGlobalLoading
+ * @param {function} setModalVisible - A callback function to control modal visibility.
+ * @param {function} onDataUpdated - A callback function triggered when data is successfully updated.
+ * @returns {Promise<void>} Resolves when the submission process completes.
+ *
+ * @throws {Error} If a network or other operational error occurs during the fetch.
+ */
+export const handleSubmitAddEditBoard = async (
+    id,
     title,
     description,
     public_private,
     selectedImage,
-    setErrorMessage,
+    setGlobalError,
+    setGlobalLoading,
     setModalVisible,
     onDataUpdated
 ) => {
@@ -252,13 +343,14 @@ export const handleSubmitAddBoard = async (
     const token = await AsyncStorage.getItem('token');
 
     const formData = new FormData();
+    if (id) formData.append('id', id);
     formData.append('title', title);
     formData.append('description', description);
     formData.append('publicPrivate', public_private);
 
-    // Only append image if one is selected
+    // Only append an image if one is selected
     if (selectedImage) {
-        // Make sure selectedImage is a URI like "file:///..."
+        // Make sure the selectedImage is a URI like "file:///..."
         const filename = selectedImage.split('/').pop(); // get file name
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : 'image/jpeg';
@@ -275,35 +367,54 @@ export const handleSubmitAddBoard = async (
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + token,
-                // Do NOT set 'Content-Type' with FormData; fetch handles it
             },
             body: formData,
         });
 
         const result = await response.json();
 
-        if (result.message) {
-            setErrorMessage('Add board unsuccessful: \n' + result.message);
+        if (response.status !== 200) {
+            setGlobalError('Add board unsuccessful: \n' + result.message);
+            setGlobalLoading(false)
         } else {
-            onDataUpdated();
+            onDataUpdated(true);
             setModalVisible(false);
+            setGlobalLoading(false);
         }
     } catch (error) {
-        console.error('Error adding board:', error);
-        setErrorMessage('Error adding board: ' + error.message);
+        setGlobalError('Error adding board: ' + error.message);
+        setGlobalLoading(false);
     }
 };
 
+/**
+ * Handles the submission of the Edit Profile form by sending updated user data
+ * to the server. This function updates user profile details including username,
+ * first name, last name, and bio, and optionally uploads a new profile image.
+ *
+ * @param {string} userName - The updated username of the user.
+ * @param {string} firstName - The updated first name of the user.
+ * @param {string} lastName - The updated last name of the user.
+ * @param {string} bio - The updated user bio.
+ * @param {string | null} selectedImage - The URI of the selected profile image.
+ * @param setGlobalError
+ * @param {function} setData - Function to update user data state in the application.
+ * @param {function} setIsEditing - Function to toggle the editing state to false after submission.
+ * @param setGlobalLoading
+ * @param {object} navigation - Used to navigate within the application if needed.
+ *
+ * @throws {Error} Logs an error if the profile update process fails. Sets an error message through `setErrorMessage`.
+ */
 export const handleSubmitEditProfile = async (
     userName,
     firstName,
     lastName,
     bio,
     selectedImage,
-    setErrorMessage,
+    setGlobalError,
     setData,
     setIsEditing,
-    setLoading,
+    setGlobalLoading,
     navigation
 ) => {
     try {
@@ -336,20 +447,39 @@ export const handleSubmitEditProfile = async (
         });
 
         const result = await response.json(); // returns the parsed JSON
-        if (result.message) {
-            setErrorMessage('Edit profile unsuccessful: ' + result.message);
+        if (response.status !== 200) {
+            setGlobalError('Edit profile unsuccessful: ' + result.message);
+            setGlobalLoading(false);
         } else {
             setData(result); // update state in ProfileScreen
             setIsEditing(false);
-            setLoading(false);
+            setGlobalLoading(false);
         }
     } catch (error) {
-        console.error('Error editing profile:', error);
-        setErrorMessage('Error editing profile: \n' + error.message);
+        setGlobalLoading(false)
+        setGlobalError('Error editing profile: \n' + error.message);
     }
 };
 
-export const handleSubmitDeleteProfile = async (setLoading, navigation, setErrorMessage) => {
+/**
+ * Handles the deletion of a user's profile by sending a DELETE request to the server.
+ *
+ * @async
+ * @function handleSubmitDeleteProfile
+ * @param setGlobalLoading
+ * @param setGlobalError
+ * @param {Object} navigation - The navigation object for controlling app navigation.
+ * @throws Will catch and handle errors that occur during the profile deletion process.
+ *
+ * This function:
+ * - Sets the loading state before processing the request.
+ * - Sends a DELETE request to the API endpoint for deleting the user profile.
+ * - Utilizes the bearer token for authentication.
+ * - Handles various outcomes, including API errors or successful deletion.
+ * - After successful deletion, removes stored tokens and navigates the user to the Login screen.
+ * - Displays error messages via `setErrorMessage` if the API call or token removal fails.
+ */
+export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError, navigation) => {
     try {
         setLoading(true);
         const apiUrl = Config.API_BASE_URL + '/api/user-data/delete';
@@ -362,19 +492,13 @@ export const handleSubmitDeleteProfile = async (setLoading, navigation, setError
                 'Accept': 'application/json',
             },
         });
-
         const result = await response.json();
-
-
-
-        if (result.message) {
-            console.log(result.message);
-            setErrorMessage('Delete profile unsuccessful: ' + result.message);
+        if (response.status !== 200) {
+            setGlobalError('Delete profile unsuccessful: ' + result.message);
         } else {
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('refresh_token');
 
-            // Show alert
             Alert.alert(
                 'Account Deleted',
                 'Your account has been successfully deleted.',
@@ -388,10 +512,101 @@ export const handleSubmitDeleteProfile = async (setLoading, navigation, setError
             );
         }
     } catch (error) {
-        setErrorMessage('Error deleting profile: \n' + error.message);
+        setGlobalError('Error deleting profile: \n' + error.message);
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+export const reloadData = async (id, setLoading, setBord, setGlobalError) => {
+    try {
+        setLoading(true);
+        const url = `${Config.API_BASE_URL}/api/model-list/get/${id}`;
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const result = await response.json();
+        if (response.status === 200) setBord(result);
+        else setGlobalError(result.message || 'Failed to reload bord');
+    } catch (err) {
+        console.error('Error in reloadData:', err);
+        setGlobalError(err.message || 'Error fetching bord');
     } finally {
         setLoading(false);
     }
+};
+
+
+/**
+ * Handles the submission for deleting a bord.
+ *
+ * This function displays a confirmation alert for deleting a specific bord.
+ * If confirmed, it attempts to delete the bord from the server using the DELETE method.
+ * Upon success, navigates the user to the main tabs view. In case of failure,
+ * an error message is set to inform the user of the issue.
+ *
+ * @param {string} bordId - The unique identifier of the bord to be deleted.
+ * @param {Function} setLoading - A function to control the loading state during the delete operation.
+ * @param {Object} navigation - The navigation object used to navigate between screens.
+ * @param {Function} setErrorMessage - A function to set error messages in case of a failed operation.
+ */
+export const handleSubmitDeleteBord = (bordId, setGlobalLoading, navigation, setGlobalError) => {
+    Alert.alert(
+        'Delete Bord',
+        'Are you sure you want to delete this bord?',
+        [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        setGlobalLoading(true);
+                        const apiUrl = `${Config.API_BASE_URL}/api/model-list/delete/${bordId}`;
+                        const token = await AsyncStorage.getItem('token');
+
+                        const response = await fetch(apiUrl, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json',
+                            },
+                        });
+
+                        const result = await response.json();
+                        if (response.status !== 200) {
+                            const msg = result?.message || 'Failed to delete bord.';
+                            setGlobalError(`Delete unsuccessful: ${msg}`);
+                            return;
+                        }
+
+                        Alert.alert(
+                            'Bord Deleted',
+                            'The bord has been successfully deleted.',
+                            [
+                                {
+                                    text: 'OK',
+                                    onPress: () => navigation.navigate('MainTabs', { screen: 'Borden' }),
+                                },
+                            ],
+                            { cancelable: false }
+                        );
+                    } catch (error) {
+                        setGlobalError('Error deleting bord:\n' + error.message);
+                    } finally {
+                        setGlobalLoading(false);
+                    }
+                },
+            },
+        ],
+        { cancelable: true }
+    );
 };
 
 /**
@@ -435,7 +650,21 @@ export const refreshToken = async () => {
 };
 
 
-export const logout = async (logoutAll = false, navigation) => {
+/**
+ * Logs the user out of the application and optionally revokes access for all devices.
+ *
+ * This function performs the following steps:
+ * - Retrieves the stored authentication tokens from AsyncStorage.
+ * - Sends a request to the server to revoke the authentication token(s). If `logoutAll`
+ *   is set to true, it will revoke access for all devices.
+ * - Clears the authentication tokens from local storage.
+ * - Navigates the user to the login screen.
+ *
+ * @param {boolean} [logoutAll=false] - Indicates whether logout should invalidate sessions across all devices.
+ * @param {Object} navigation - The navigation object used to redirect the user to the login screen.
+ * @throws Will display an alert if the logout request fails.
+ */
+export const logout = async (logoutAll = false, navigation, setGlobalError, setGlobalLoading) => {
     const refresh = await AsyncStorage.getItem("refresh_token");
     const token = await AsyncStorage.getItem("token");
 
@@ -456,12 +685,13 @@ export const logout = async (logoutAll = false, navigation) => {
 
     const data = await response.json();
     if (!response.ok) {
-        Alert.alert("Logout failed:", data);
+        const errorMessage = typeof data === "string" ? data : data.message || JSON.stringify(data);
+        setGlobalError(errorMessage);
     }
 
     // Clear local storage
     await AsyncStorage.removeItem("token");
     await AsyncStorage.removeItem("refresh_token");
-
+    setGlobalLoading(false);
     navigation.navigate('Login');
 };

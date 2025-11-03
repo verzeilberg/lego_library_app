@@ -5,10 +5,9 @@ import {handleCodeSubmit} from "../components/Apicalls";
 import {handleChange} from "../components/Functions";
 import {handleKeyPress} from "../components/Functions";
 
-export default function FourDigitCodeInput({navigation}) {
+export default function FourDigitCodeInput({navigation, setGlobalError, setGlobalLoading}) {
     const [code, setCode] = useState(['', '', '', '']);
     const inputRefs = useRef([]);
-    const [errorMessage, setErrorMessage] = useState(null);
 
     return (
         <View style={globalStyles.container}>
@@ -27,13 +26,12 @@ export default function FourDigitCodeInput({navigation}) {
                     />
                 ))}
             </View>
-            {/* Conditionally render error message */}
-            {errorMessage && (
-                <Text style={globalStyles.errorText}>{errorMessage}</Text>
-            )}
             <Pressable
                 style={globalStyles.button}
-                onPress={() => handleCodeSubmit(code, navigation, setErrorMessage)}
+                onPress={() => {
+                    setGlobalLoading(true);
+                    handleCodeSubmit(code, navigation, setGlobalError, setGlobalLoading);
+                }}
             >
                 <Text style={globalStyles.text}>Activate</Text>
             </Pressable>
