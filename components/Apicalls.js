@@ -15,13 +15,9 @@ import {Alert} from "react-native";
  */
 export const handleSubmitLogin = async (email, password, navigation, setGlobalError) => {
     const apiUrl = `${Config.API_BASE_URL}/api/login`;
-    const data = { email, password };
-
     try {
         const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, password}),
         });
 
         const result = await response.json();
@@ -35,6 +31,7 @@ export const handleSubmitLogin = async (email, password, navigation, setGlobalEr
             setGlobalError('Login unsuccessful: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
+        console.log(error);
         setGlobalError('Error logging in: ' + error.message);
     }
 };
@@ -57,25 +54,15 @@ export const handleSubmitLogin = async (email, password, navigation, setGlobalEr
  */
 export const handleSubmitRegistration = (firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation) => {
     // API endpoint for registration
-    const apiUrl = Config.API_BASE_URL+'/api/public/user/register';
-
-    // Sending json data
-    const data = {
-        firstName: firstname,
-        lastName: lastname,
-        email: email,
-        plainPassword: password
-    };
-
+    const apiUrl = Config.API_BASE_URL + '/api/public/user/register';
     try {
         fetch(apiUrl, {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
+            }, body: JSON.stringify({
+                firstName: firstname, lastName: lastname, email: email, plainPassword: password,
+            })
         })
-            .then(response => response.json())
             .then(result => {
                 const message = result.detail;
                 if (message) {
@@ -90,6 +77,7 @@ export const handleSubmitRegistration = (firstname, lastname, email, password, s
             })
             .catch(error => {
                 setGlobalLoading(false);
+                console.log(error);
                 setGlobalError('Error registering: ' + error.text);
             });
 
@@ -122,17 +110,14 @@ export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlob
     const apiUrl = Config.API_BASE_URL + '/api/public/user/activate';
     const activationtoken = await AsyncStorage.getItem('activation-token')
     const data = {
-        token: activationtoken,
-        code: parseInt(code.join(''), 10)
+        token: activationtoken, code: parseInt(code.join(''), 10)
     };
 
     try {
         fetch(apiUrl, {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
+            }, body: JSON.stringify(data)
         })
             .then(response => response.json())
             .then(result => {
@@ -174,7 +159,7 @@ export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlob
  */
 export const handlePasswordSubmit = async (password, navigation, setGlobalError, setGlobalLoading) => {
     // API endpoint for registration
-    const apiUrl = Config.API_BASE_URL+'/api/user/patch';
+    const apiUrl = Config.API_BASE_URL + '/api/user/patch';
     const token = await AsyncStorage.getItem('reset-password-token');
     // Sending json data
     const data = {
@@ -183,12 +168,9 @@ export const handlePasswordSubmit = async (password, navigation, setGlobalError,
 
     try {
         fetch(apiUrl, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': 'Bearer '+token,
-                'Content-Type': 'application/merge-patch+json',
-            },
-            body: JSON.stringify(data)
+            method: 'PATCH', headers: {
+                'Authorization': 'Bearer ' + token, 'Content-Type': 'application/merge-patch+json',
+            }, body: JSON.stringify(data)
         })
             .then(response => response.json())
             .then(result => {
@@ -220,18 +202,11 @@ export const handlePasswordSubmit = async (password, navigation, setGlobalError,
  * @param {object} navigation - Navigation object used to redirect the user to the ResetPassword screen.
  */
 export const handleForgotPasswordSubmit = (email, setGlobalError, setGlobalLoading, navigation) => {
-    const apiUrl = Config.API_BASE_URL+'/api/public/user/forgot-password';
-    // Assuming your API expects JSON data
-    const data = {
-        email: email
-    };
-
+    const apiUrl = Config.API_BASE_URL + '/api/public/user/forgot-password';
     fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
+        method: 'POST', headers: {
+            'Content-Type': 'application/json', 'Accept': 'application/json',
+        }, body: JSON.stringify({email})
     })
         .then(response => response.json())
         .then(result => {
@@ -247,6 +222,7 @@ export const handleForgotPasswordSubmit = (email, setGlobalError, setGlobalLoadi
             }
         })
         .catch(error => {
+            console.log(error);
             setGlobalError('Error login: ' + error.message);
             setGlobalLoading(false);
         });
@@ -278,17 +254,14 @@ export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navig
     const apiUrl = Config.API_BASE_URL + '/api/public/user/check-token-code';
     const token = await AsyncStorage.getItem('reset-password-token');
     const data = {
-        token: token,
-        code: parseInt(code.join(''), 10),
+        token: token, code: parseInt(code.join(''), 10),
     };
 
     try {
         fetch(apiUrl, {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
+            }, body: JSON.stringify(data)
         })
             .then(response => response.json())
             .then(result => {
@@ -304,8 +277,7 @@ export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navig
             })
     } catch (err) {
         setGlobalError(err.message);
-    } finally
-    {
+    } finally {
         setGlobalLoading(false);
     }
 };
@@ -318,32 +290,24 @@ export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navig
  * @param id
  * @param {string} title - The title of the new board being created.
  * @param {string} description - A description for the new board.
- * @param {string} public_private - The visibility flag, typically "public" or "private".
+ * @param {boolean} public_private - The visibility flag, typically "public" or "private".
  * @param {string} [selectedImage] - The URI of the selected image file, if one is included.
  * @param setGlobalError
  * @param setGlobalLoading
  * @param {function} setModalVisible - A callback function to control modal visibility.
  * @param {function} onDataUpdated - A callback function triggered when data is successfully updated.
+ * @param mode
  * @returns {Promise<void>} Resolves when the submission process completes.
  *
  * @throws {Error} If a network or other operational error occurs during the fetch.
  */
-export const handleSubmitAddEditBoard = async (
-    id,
-    title,
-    description,
-    public_private,
-    selectedImage,
-    setGlobalError,
-    setGlobalLoading,
-    setModalVisible,
-    onDataUpdated
-) => {
-    const apiUrl = Config.API_BASE_URL + '/api/model-list';
+export const handleSubmitAddEditBoard = async (id, title, description, public_private, selectedImage, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated, mode) => {
+    const apiUrl = Config.API_BASE_URL + '/api/set-list';
     const token = await AsyncStorage.getItem('token');
 
     const formData = new FormData();
-    if (id) formData.append('id', id);
+    if (id && mode === 'edit') formData.append('id', id);
+    if (id && mode === 'add') formData.append('parentId', id);
     formData.append('title', title);
     formData.append('description', description);
     formData.append('publicPrivate', public_private);
@@ -356,19 +320,15 @@ export const handleSubmitAddEditBoard = async (
         const type = match ? `image/${match[1]}` : 'image/jpeg';
 
         formData.append('file', {
-            uri: selectedImage,
-            type: type,
-            name: filename,
+            uri: selectedImage, type: type, name: filename,
         });
     }
 
     try {
         const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
+            method: 'POST', headers: {
                 'Authorization': 'Bearer ' + token,
-            },
-            body: formData,
+            }, body: formData,
         });
 
         const result = await response.json();
@@ -385,6 +345,99 @@ export const handleSubmitAddEditBoard = async (
         setGlobalError('Error adding board: ' + error.message);
         setGlobalLoading(false);
     }
+};
+
+export const handleSubmitAddSet = async (bordId, legoNmbr, addLegoImages = false, addLegoParts = false, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated) => {
+    try {
+        const apiUrl = `${Config.API_BASE_URL}/api/lego/sets/create`;
+        const token = await AsyncStorage.getItem('token');
+        const body = {
+            id: bordId, legoNmbr: legoNmbr, addLegoImages: addLegoImages, addLegoParts: addLegoParts
+        };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST', headers: {
+                'Authorization': `Bearer ${token}`, 'Accept': 'application/json', // ✅ expect JSON back
+                // DO NOT set Content-Type, fetch will handle multipart boundaries
+            }, body: JSON.stringify(body),
+        });
+
+        const result = await response.json(); // returns the parsed JSON
+        console.log(result);
+
+        if (response.status !== 200) {
+            setGlobalError('Adding set unsuccessful: ' + result.message);
+            setGlobalLoading(false);
+            onDataUpdated();
+            setModalVisible(false);
+        } else {
+            onDataUpdated();
+            setModalVisible(false);
+            setGlobalLoading(false);
+        }
+
+    } catch (error) {
+        setGlobalLoading(false)
+        setGlobalError('Error adding set: \n' + error.message);
+    }
+};
+
+export const handleSubmitGetSet = async (setId, listId, setGlobalError, setGlobalLoading) => {
+    try {
+        const apiUrl = `${Config.API_BASE_URL}/api/lego/set-lists/${listId}/sets/${setId}`;
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch(apiUrl, {
+            method: 'GET', headers: {
+                'Authorization': `Bearer ${token}`, 'Accept': 'application/json',
+            },
+        });
+
+        const result = await response.json(); // returns the parsed JSON
+        if (response.status !== 200) {
+            setGlobalError('Adding set unsuccessful: ' + result.message);
+            setGlobalLoading(false);
+        } else {
+            setGlobalLoading(false);
+            return result;
+        }
+
+    } catch (error) {
+        setGlobalLoading(false)
+        setGlobalError('Error adding set: \n' + error.message);
+    }
+};
+
+export const handleSubmitDeleteSetFromSetList = async (setId, bordId, setGlobalError, setGlobalLoading, navigation) => {
+    Alert.alert('Delete set', 'Are you sure you want to delete this set?', [{text: 'Cancel', style: 'cancel'}, {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+    try {
+        setGlobalLoading(true);
+        const apiUrl = `${Config.API_BASE_URL}/api/lego/list/${bordId}/set/${setId}`;
+        const token = await AsyncStorage.getItem('token');
+        const response = await fetch(apiUrl, {
+            method: 'DELETE', headers: {
+                Authorization: `Bearer ${token}`, Accept: 'application/json',
+            },
+        });
+
+        const result = await response.json();
+        console.log(result);
+        if (!response.ok) {
+            setGlobalError(result?.message || 'Deleting set from set list unsuccessful');
+            setGlobalLoading(false);
+            return null;
+        }
+
+        setGlobalLoading(false);
+        navigation.goBack();
+
+    } catch (error) {
+        setGlobalLoading(false);
+        setGlobalError('Error deleting set from set list:\n' + error.message);
+        return null;
+    }
+        },
+    },], {cancelable: true});
 };
 
 /**
@@ -405,18 +458,7 @@ export const handleSubmitAddEditBoard = async (
  *
  * @throws {Error} Logs an error if the profile update process fails. Sets an error message through `setErrorMessage`.
  */
-export const handleSubmitEditProfile = async (
-    userName,
-    firstName,
-    lastName,
-    bio,
-    selectedImage,
-    setGlobalError,
-    setData,
-    setIsEditing,
-    setGlobalLoading,
-    navigation
-) => {
+export const handleSubmitEditProfile = async (userName, firstName, lastName, bio, selectedImage, setGlobalError, setData, setIsEditing, setGlobalLoading, navigation) => {
     try {
         const apiUrl = Config.API_BASE_URL + '/api/user-data/edit';
         const token = await AsyncStorage.getItem('token');
@@ -431,19 +473,16 @@ export const handleSubmitEditProfile = async (
             const filename = selectedImage.split('/').pop();
             const match = /\.(\w+)$/.exec(filename);
             const type = match ? `image/${match[1]}` : 'image/jpeg';
-            formData.append('file', { uri: selectedImage, type, name: filename });
+            formData.append('file', {uri: selectedImage, type, name: filename});
         } else {
             formData.append('file', '');
         }
 
         const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json', // ✅ expect JSON back
+            method: 'POST', headers: {
+                'Authorization': `Bearer ${token}`, 'Accept': 'application/json', // ✅ expect JSON back
                 // DO NOT set Content-Type, fetch will handle multipart boundaries
-            },
-            body: formData,
+            }, body: formData,
         });
 
         const result = await response.json(); // returns the parsed JSON
@@ -481,15 +520,12 @@ export const handleSubmitEditProfile = async (
  */
 export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError, navigation) => {
     try {
-        setLoading(true);
         const apiUrl = Config.API_BASE_URL + '/api/user-data/delete';
         const token = await AsyncStorage.getItem('token');
 
         const response = await fetch(apiUrl, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
+            method: 'DELETE', headers: {
+                'Authorization': `Bearer ${token}`, 'Accept': 'application/json',
             },
         });
         const result = await response.json();
@@ -499,17 +535,9 @@ export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('refresh_token');
 
-            Alert.alert(
-                'Account Deleted',
-                'Your account has been successfully deleted.',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.navigate('Login'),
-                    },
-                ],
-                { cancelable: false }
-            );
+            Alert.alert('Account Deleted', 'Your account has been successfully deleted.', [{
+                text: 'OK', onPress: () => navigation.navigate('Login'),
+            },], {cancelable: false});
         }
     } catch (error) {
         setGlobalError('Error deleting profile: \n' + error.message);
@@ -518,27 +546,26 @@ export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError
     }
 };
 
-export const reloadData = async (id, setLoading, setBord, setGlobalError) => {
+export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError) => {
     try {
-        setLoading(true);
-        const url = `${Config.API_BASE_URL}/api/model-list/get/${id}`;
+        setGlobalLoading(true);
+        const url = `${Config.API_BASE_URL}/api/set-lists/${id}`;
         const token = await AsyncStorage.getItem('token');
         const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
+            method: 'GET', headers: {
+                'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json',
             },
         });
-
         const result = await response.json();
-        if (response.status === 200) setBord(result);
-        else setGlobalError(result.message || 'Failed to reload bord');
+        if (response.status === 200) {
+            setBord(result);
+        } else {
+            setGlobalError(result.message || 'Failed to reload bord');
+        }
     } catch (err) {
-        console.error('Error in reloadData:', err);
         setGlobalError(err.message || 'Error fetching bord');
     } finally {
-        setLoading(false);
+        setGlobalLoading(false);
     }
 };
 
@@ -552,61 +579,41 @@ export const reloadData = async (id, setLoading, setBord, setGlobalError) => {
  * an error message is set to inform the user of the issue.
  *
  * @param {string} bordId - The unique identifier of the bord to be deleted.
- * @param {Function} setLoading - A function to control the loading state during the delete operation.
+ * @param setGlobalLoading
  * @param {Object} navigation - The navigation object used to navigate between screens.
- * @param {Function} setErrorMessage - A function to set error messages in case of a failed operation.
+ * @param setGlobalError
  */
 export const handleSubmitDeleteBord = (bordId, setGlobalLoading, navigation, setGlobalError) => {
-    Alert.alert(
-        'Delete Bord',
-        'Are you sure you want to delete this bord?',
-        [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        setGlobalLoading(true);
-                        const apiUrl = `${Config.API_BASE_URL}/api/model-list/delete/${bordId}`;
-                        const token = await AsyncStorage.getItem('token');
+    Alert.alert('Delete Bord', 'Are you sure you want to delete this bord?', [{text: 'Cancel', style: 'cancel'}, {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+            try {
+                setGlobalLoading(true);
+                const apiUrl = `${Config.API_BASE_URL}/api/set-list/delete/${bordId}`;
+                const token = await AsyncStorage.getItem('token');
 
-                        const response = await fetch(apiUrl, {
-                            method: 'DELETE',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Accept': 'application/json',
-                            },
-                        });
+                const response = await fetch(apiUrl, {
+                    method: 'DELETE', headers: {
+                        'Authorization': `Bearer ${token}`, 'Accept': 'application/json',
+                    },
+                });
 
-                        const result = await response.json();
-                        if (response.status !== 200) {
-                            const msg = result?.message || 'Failed to delete bord.';
-                            setGlobalError(`Delete unsuccessful: ${msg}`);
-                            return;
-                        }
+                const result = await response.json();
+                if (response.status !== 200) {
+                    const msg = result?.message || 'Failed to delete bord.';
+                    setGlobalError(`Delete unsuccessful: ${msg}`);
+                    return;
+                }
 
-                        Alert.alert(
-                            'Bord Deleted',
-                            'The bord has been successfully deleted.',
-                            [
-                                {
-                                    text: 'OK',
-                                    onPress: () => navigation.navigate('MainTabs', { screen: 'Borden' }),
-                                },
-                            ],
-                            { cancelable: false }
-                        );
-                    } catch (error) {
-                        setGlobalError('Error deleting bord:\n' + error.message);
-                    } finally {
-                        setGlobalLoading(false);
-                    }
-                },
-            },
-        ],
-        { cancelable: true }
-    );
+                Alert.alert('Bord Deleted', 'The bord has been successfully deleted.', [{
+                    text: 'OK', onPress: () => navigation.navigate('MainTabs', {screen: 'Borden'}),
+                },], {cancelable: false});
+            } catch (error) {
+                setGlobalError('Error deleting bord:\n' + error.message);
+            } finally {
+                setGlobalLoading(false);
+            }
+        },
+    },], {cancelable: true});
 };
 
 /**
@@ -629,8 +636,8 @@ export const refreshToken = async () => {
 
         const response = await fetch(apiUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refreshToken: refresh }),
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({refreshToken: refresh}),
         });
 
         if (!response.ok) {
@@ -672,14 +679,10 @@ export const logout = async (logoutAll = false, navigation, setGlobalError, setG
 
     // Call backend to revoke token(s)
     const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-            refreshToken: refresh,
-            allDevices: logoutAll,
+        method: "POST", headers: {
+            "Content-Type": "application/json", ...(token ? {"Authorization": `Bearer ${token}`} : {}),
+        }, body: JSON.stringify({
+            refreshToken: refresh, allDevices: logoutAll,
         }),
     });
 

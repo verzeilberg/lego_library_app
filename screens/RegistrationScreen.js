@@ -11,17 +11,12 @@ export default function RegistrationScreen({navigation, setGlobalError, setGloba
     const [lastname, setLastname] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(true);
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);
 
     useEffect(() => {
-        setLoading(false);
+        setGlobalLoading(false);
     }, []);
-
-    if (loading) {
-        return <LoadingSpinner />;
-    }
 
     return (
         <View style={globalStyles.container}>

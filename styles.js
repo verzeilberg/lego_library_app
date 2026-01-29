@@ -137,17 +137,27 @@ export const globalStyles = StyleSheet.create({
         color: '#666',
     },
     titleText: {
-        fontSize: 16,
+        fontSize: 21,
         fontWeight: 'bold',
+        marginTop: 8,
         marginBottom: 8,
         marginLeft:8,
-
+    },
+    titleSetText: {
+        fontSize: 21,
+        fontWeight: 'bold',
+        marginTop: 8,
+        marginBottom: 8,
     },
     descriptionText: {
         fontSize: 14,
         color: '#555',
         marginBottom: 8,
         marginLeft:8,
+    },
+    setText: {
+        fontSize: 14,
+        color: '#555',
     },
     imageRoundContainer: {
         width: 150,

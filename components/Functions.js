@@ -30,8 +30,8 @@ export const handleKeyPress = (e, index, code, inputRefs) => {
  * or successfully refreshed, the user is redirected to the "Profile" screen.
  *
  * @param {object} navigation - The navigation object used for redirecting the user to different screens.
- * @param {function} setErrorMessage - A setter function to update the error message in the state.
- * @param {function} setLoading - A setter function to indicate the loading state during the token check.
+ * @param setGlobalError
+ * @param setGlobalLoading
  *
  * @async
  * @throws {Error} If there's an issue retrieving or decoding the token, or during token refresh operations.
@@ -148,49 +148,6 @@ export const handleChange = (text, index, code,  setCode, inputRefs) => {
     setCode(newCode);
 };
 
-export const selectAndUploadImage2 = async (setImageUri, setData, setUploading) => {
-    // Request permission
-    const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-        Alert.alert("Permission required", "You need to grant camera roll permissions.");
-        return;
-    }
-
-    // Open image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Image],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-    });
-
-    if (!result.canceled) {
-        setImageUri(result.assets[0].uri); // Store the selected image preview
-        await uploadImage(result.assets[0].uri, setData, setUploading);
-    }
-};
-
-/**
- * Prompts the user to select an option to either take a photo using the camera or select an image from the library.
- * The selected image's URI and associated data will be set using the provided setter functions.
- *
- * @param {Function} setImageUri - A function to update the state with the selected image's URI.
- * @param {Function} setData - A function to update the state with additional data related to the selected image.
- * @param {Function} setUploading - A function to update the state indicating the upload process status.
- * @returns {Promise<void>} A promise that resolves once the operation is completed.
- */
-export const selectAndUploadImage = async (setImageUri, setData, setUploading) => {
-    Alert.alert(
-        "Kies een optie",
-        "Wil je een foto nemen of kiezen uit de bibliotheek?",
-        [
-            { text: "Camera", onPress: async () => await openCamera(setImageUri, setData, setUploading) },
-            { text: "Bibliotheek", onPress: async () => await openImageLibrary(setImageUri, setData, setUploading) },
-            { text: "Annuleer", style: "cancel" },
-        ]
-    );
-};
-
 /**
  * Processes an image by resizing, compressing, and adding a cache-busting query parameter.
  *
@@ -215,125 +172,51 @@ const processImage = async (uri) => {
 };
 
 /**
- * Asynchronously opens the device's image library, allowing the user to select and upload an image with optional editing.
  *
- * This function requests the necessary permissions to access the media library and handles cases where the permissions are not granted.
- * After the user selects an image, it processes the image and uploads it using the provided setter functions.
- *
- * @param {Function} setImageUri - A callback function to set the URI of the selected image after processing.
- * @param {Function} setData - A callback function to set the state or data after uploading the image.
- * @param {Function} setUploading - A callback function to handle the uploading state.
- * @throws Will alert the user if the media library permissions are not granted.
+ * @param images
+ * @param setNumber
+ * @param listId
+ * @param setGlobalError
+ * @returns {Promise<any|null>}
  */
-const openImageLibrary = async (setImageUri, setData, setUploading) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-        Alert.alert("Permission required", "Je moet toegang geven tot de fotobibliotheek.");
-        return;
-    }
+export const uploadImagesToSet = async (images, setNumber, listId, setGlobalError) => {
+    if (!images || images.length === 0) return [];
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Image],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-        cropperCircleOverlay: true,
-    });
-
-    if (!result.canceled) {
-        const uri = await processImage(result.assets[0].uri);
-        setImageUri(uri);
-        await uploadImage(result.assets[0].uri, setData, setUploading);
-    }
-};
-
-/**
- * Opens the device's camera to capture an image, processes the captured photo, and uploads the image.
- *
- * This function first requests camera permissions from the user. If permissions are denied,
- * an alert dialog is displayed informing the user that camera access is required. If permissions are
- * granted, the camera is launched for the user to take a photo.
- *
- * After capturing an image, the function processes the image URI, sets the processed image URI
- * using the provided setImageUri function, and uploads the image using the provided setData and
- * setUploading functions.
- *
- * @async
- * @function openCamera
- * @param {Function} setImageUri - A callback function to set the processed image URI.
- * @param {Function} setData - A callback function to update the upload data state.
- * @param {Function} setUploading - A callback function to update the uploading state.
- * @throws {Error} Throws an error if there's an issue with processing or uploading the image.
- */
-const openCamera = async (setImageUri, setData, setUploading) => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-        Alert.alert("Permission required", "Je moet toegang geven tot de camera.");
-        return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-        cropperCircleOverlay: true,
-    });
-
-    if (!result.canceled) {
-        const uri = await processImage(result.assets[0].uri);
-        setImageUri(uri);
-        await uploadImage(result.assets[0].uri, setData, setUploading);
-    }
-};
-/**
- * Asynchronously uploads an image to a specified server endpoint.
- *
- * @param {string} uri - The URI of the image file to be uploaded.
- * @param setData
- * @param setUploading
- * @returns {Promise<void>} A promise that resolves when the image is successfully uploaded or rejects if an error occurs.
- *
- * This function handles image upload by:
- * - Preparing the form data with the image file.
- * - Sending the image to a configured API endpoint using a POST request.
- * - Using an authentication token stored in AsyncStorage to authorize the request.
- * - Displaying alerts for upload success or failure.
- * - Managing the upload state via `setUploading`.
- *
- * Note: The URI should correspond to an existing image in the specified format (e.g., "image/jpeg").
- */
-export const uploadImage = async (uri, setData, setUploading) => {
-    // Prepare for data
     const formData = new FormData();
-    formData.append("file", {
-        uri,
-        type: "image/jpeg", // Change based on the actual type
-        name: "upload.jpg",
+
+    images.forEach((asset, i) => {
+        formData.append("files[]", {
+            uri: asset.uri,
+            type: asset.type || "image/jpeg",
+            name: `image_${Date.now()}_${i}.jpg`,
+        });
     });
+
+
 
     try {
-        // API endpoint for registration
-        const apiUrl = Config.API_BASE_URL+'/api/user/media_objects';
-        const token = await AsyncStorage.getItem('token');
+        const apiUrl = `${Config.API_BASE_URL}/api/lego/set-lists/${listId}/sets/${setNumber}/add-images`;
+        const token = await AsyncStorage.getItem("token");
+
         const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
-                'Authorization': 'Bearer '+token,
+                Authorization: `Bearer ${token}`,
                 "Content-Type": "multipart/form-data",
             },
             body: formData,
         });
 
-        const jsonData = await response.json();
-        if(jsonData['error']) {
-            Alert.alert("Upload Error", jsonData['error']);
-            return;
+        const data = await response.json();
+        if (data.error) {
+            setGlobalError("Upload Error", data.error);
+            return null;
         }
-        setData(jsonData);
+
+        return data; // Should be an array of uploaded images
     } catch (error) {
-        Alert.alert("Upload Error", error.message);
-    } finally {
-        setUploading(false);
+        setGlobalError("Upload Error", data.error);
+        return null;
     }
 };
 
@@ -371,7 +254,7 @@ export const fetchData = async (setData, setGlobalError, setGlobalLoading) => {
  */
 export const fetchModelLists= async (setData, setGlobalError, setGlobalLoading) => {
     const token = await AsyncStorage.getItem('token');
-    const apiUrl = Config.API_BASE_URL + '/api/model-lists';
+    const apiUrl = Config.API_BASE_URL + '/api/set-lists';
     try {
         const response = await fetch(apiUrl, {
             method: 'GET',
@@ -416,7 +299,7 @@ export const openCameraWithoutUpload = async () => {
     const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 1,
     });
 
     return result;
@@ -436,22 +319,28 @@ export const openCameraWithoutUpload = async () => {
  * @returns {Promise<object>} A promise that resolves to an object containing details of the selected image, or
  * an object with a `cancelled` property set to `true` if the user did not grant permission or cancelled the operation.
  */
-export const openImageLibraryWithoutUpload = async () => {
+export const openImageLibraryWithoutUpload = async (
+    allowsEditing = false,
+    selectionLimit = 0,
+    allowMultiple = true
+) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-        alert('Media library permission is required!');
-        return { cancelled: true };
+    if (status !== "granted") {
+        Alert.alert('Permission required', 'Media library permission is required!');
+        return { canceled: true };
     }
+    const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
+        allowsEditing: allowsEditing,
+        allowsMultipleSelection: allowMultiple,
+        selectionLimit: selectionLimit,
+
         quality: 1,
     });
 
-    return result;
+    return result; // assets always here
 };
 
 /**
@@ -472,13 +361,88 @@ export const selectImage = () => {
             "Wil je een foto nemen of kiezen uit de bibliotheek?",
             [
                 { text: "Camera", onPress: async () => resolve(await openCameraWithoutUpload()) },
-                { text: "Bibliotheek", onPress: async () => resolve(await openImageLibraryWithoutUpload()) },
+                { text: "Bibliotheek", onPress: async () => resolve(await openImageLibraryWithoutUpload(true, 0, false)) },
                 { text: "Annuleer", style: "cancel", onPress: () => resolve({ cancelled: true }) },
             ]
         );
     });
 };
 
+export const selectMultipleImage = async (setNumber, bordId, setGlobalError, setGlobalLoading) => {
+    return new Promise((resolve) => {
+        const handleAsyncWork = async (input, isCamera = false) => {
+            try {
+                setGlobalLoading(true);
+
+                let assetsArray;
+
+                if (isCamera) {
+                    // Camera result might be a single object or an array of assets
+                    if (input.assets && input.assets.length > 0) {
+                        // New API style
+                        assetsArray = input.assets;
+                    } else if (input.uri) {
+                        // Old API style
+                        assetsArray = [input];
+                    } else {
+                        throw new Error("No valid URI found from camera");
+                    }
+                } else {
+                    assetsArray = input; // library result
+                }
+
+                // Process all images
+                const processedImages = await Promise.all(
+                    assetsArray.map(asset => processImage(asset.uri).then(uri => ({ uri })))
+                );
+
+                // Upload all images at once
+                const uploadedResults = await uploadImagesToSet(processedImages, setNumber, bordId, setGlobalError);
+
+                resolve({ cancelled: false, uploaded: uploadedResults });
+            } catch (error) {
+                setGlobalError(error?.message);
+                resolve({ cancelled: true });
+            } finally {
+                setGlobalLoading(false);
+            }
+        };
+
+        Alert.alert(
+            "Kies een optie",
+            "Wil je een foto nemen of foto's kiezen uit de bibliotheek?",
+            [
+                {
+                    text: "Camera",
+                    onPress: async () => {
+                        const result = await openCameraWithoutUpload();
+                        if (result?.cancelled) {
+                            resolve({ cancelled: true });
+                            return;
+                        }
+                        handleAsyncWork(result, true);
+                    },
+                },
+                {
+                    text: "Bibliotheek",
+                    onPress: async () => {
+                        const result = await openImageLibraryWithoutUpload(false, 10, true);
+                        if (result?.canceled || !result.assets?.length) {
+                            resolve({ cancelled: true });
+                            return;
+                        }
+                        handleAsyncWork(result.assets, false);
+                    },
+                },
+                {
+                    text: "Annuleer",
+                    style: "cancel",
+                    onPress: () => resolve({ cancelled: true }),
+                },
+            ]
+        );
+    });
+};
 // Delete button
 export const confirmDelete = (setGlobalLoading, setGlobalError, navigation) => {
     Alert.alert(
