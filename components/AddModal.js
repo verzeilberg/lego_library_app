@@ -5,6 +5,7 @@ import {handleSubmitAddEditBoard, handleSubmitAddSet} from "./Apicalls";
 import Config from "../config/config";
 import {selectImage} from "./Functions";
 import {MaterialIcons} from '@expo/vector-icons';
+import {RectangleSwitchMini} from "./RectangleSwitch.js";
 
 export default function AddModal({
                                      modalVisible,
@@ -22,7 +23,8 @@ export default function AddModal({
     const [isPublicPrivate, setIsPublicPrivate] = useState(false);
     const [legoNmbr, setLegoNmbr] = useState('');
     const [addLegoParts, setAddLegoParts] = useState(false);
-    const [addLegoImages, setAddLegoImages] = useState(false);addLegoImages
+    const [addLegoMinifigs, setAddLegoMinifigs] = useState(false);
+    const [addLegoImages, setAddLegoImages] = useState(false);
 
     const [selectedImage, setSelectedImage] = useState(null);
     const [errorMessage, setErrorMessage] = useState(null);
@@ -30,6 +32,8 @@ export default function AddModal({
     const toggleSwitch = () => setIsPublicPrivate(prev => !prev);
     const toggleSwitch2 = () => setAddLegoParts(prev => !prev);
     const toggleSwitch3 = () => setAddLegoImages(prev => !prev);
+
+    const toggleSwitch4 = () => setAddLegoMinifigs(prev => !prev);
 
     // Reset or prefill fields whenever modal opens
     useEffect(() => {
@@ -92,7 +96,7 @@ export default function AddModal({
                 setErrorMessage('No bord ID provided.');
                 return;
             }
-            handleSubmitAddSet(data.bordId, legoNmbr, addLegoImages, addLegoParts, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated);
+            handleSubmitAddSet(data.bordId, legoNmbr, addLegoImages, addLegoParts, addLegoMinifigs, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated);
         } else if (mode === 'edit') {
             if (!data?.id) {
                 setErrorMessage('No bord ID provided for edit.');
@@ -169,7 +173,7 @@ export default function AddModal({
 
                                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                     <Text style={{marginRight: 10, fontWeight: 'bold'}}>
-                                        Add lego image(s)
+                                        Add image(s)
                                     </Text>
                                     <Switch
                                         trackColor={{false: '#767577', true: '#349A20FF'}}
@@ -181,7 +185,7 @@ export default function AddModal({
 
                                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                     <Text style={{marginRight: 10, fontWeight: 'bold'}}>
-                                        Add lego parts
+                                        Add parts
                                     </Text>
                                     <Switch
                                         trackColor={{false: '#767577', true: '#349A20FF'}}
@@ -189,6 +193,25 @@ export default function AddModal({
                                         onValueChange={toggleSwitch2}
                                         value={addLegoParts}
                                     />
+                                </View>
+
+                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                    <Text style={{marginRight: 10, fontWeight: 'bold'}}>
+                                        Add minifigs
+                                    </Text>
+                                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                        <Text style={{marginRight: 10, fontWeight: 'bold'}}>
+                                            Add minifigs
+                                        </Text>
+                                        <RectangleSwitchMini
+                                            value={addLegoMinifigs}
+                                            onChange={toggleSwitch4}
+                                            width={60}
+                                            height={28}
+                                            activeColor="#3dd51e"
+                                            inactiveColor="#ccc"
+                                        />
+                                    </View>
                                 </View>
                             </>
                         ) : (

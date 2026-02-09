@@ -31,7 +31,6 @@ export const handleSubmitLogin = async (email, password, navigation, setGlobalEr
             setGlobalError('Login unsuccessful: ' + (result.error || 'Unknown error'));
         }
     } catch (error) {
-        console.log(error);
         setGlobalError('Error logging in: ' + error.message);
     }
 };
@@ -52,38 +51,32 @@ export const handleSubmitLogin = async (email, password, navigation, setGlobalEr
  * If unsuccessful, set an error message using the `setErrorMessage` function.
  * Logs errors in the console in case of issues during the fetch or JSON parsing process.
  */
-export const handleSubmitRegistration = (firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation) => {
+export const handleSubmitRegistration = async (firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation) => {
     // API endpoint for registration
     const apiUrl = Config.API_BASE_URL + '/api/public/user/register';
     try {
-        fetch(apiUrl, {
+        const response = await fetch(apiUrl, {
             method: 'POST', headers: {
                 'Content-Type': 'application/json',
             }, body: JSON.stringify({
                 firstName: firstname, lastName: lastname, email: email, plainPassword: password,
             })
-        })
-            .then(result => {
-                const message = result.detail;
-                if (message) {
-                    setGlobalError('Registration unsuccesfull: \n' + result.detail);
-                    setGlobalLoading(false);
-                } else {
-                    const token = result.token;
-                    AsyncStorage.setItem('activation-token', token);
-                    setGlobalLoading(false);
-                    navigation.navigate('ActivateAccount');
-                }
-            })
-            .catch(error => {
-                setGlobalLoading(false);
-                console.log(error);
-                setGlobalError('Error registering: ' + error.text);
-            });
+        });
 
-    } catch (err) {
+        const result = await response.json();
+        if (response.status !== 200) {
+            setGlobalError('Registration unsuccesfull: \n' + result.detail);
+            setGlobalLoading(false);
+        } else {
+            const token = result.token;
+            AsyncStorage.setItem('activation-token', token);
+            setGlobalLoading(false);
+            navigation.navigate('ActivateAccount');
+        }
+    } catch (error) {
+        console.error(error);
         setGlobalLoading(false);
-        console.error(err.message);
+        setGlobalError('Error registering: ' + error.text);
     }
 };
 
@@ -222,7 +215,6 @@ export const handleForgotPasswordSubmit = (email, setGlobalError, setGlobalLoadi
             }
         })
         .catch(error => {
-            console.log(error);
             setGlobalError('Error login: ' + error.message);
             setGlobalLoading(false);
         });
@@ -332,9 +324,8 @@ export const handleSubmitAddEditBoard = async (id, title, description, public_pr
         });
 
         const result = await response.json();
-
         if (response.status !== 200) {
-            setGlobalError('Add board unsuccessful: \n' + result.message);
+            setGlobalError('Add board unsuccessfull : \n' + result.message);
             setGlobalLoading(false)
         } else {
             onDataUpdated(true);
@@ -347,12 +338,26 @@ export const handleSubmitAddEditBoard = async (id, title, description, public_pr
     }
 };
 
-export const handleSubmitAddSet = async (bordId, legoNmbr, addLegoImages = false, addLegoParts = false, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated) => {
+export const handleSubmitAddSet = async (
+    bordId,
+    legoNmbr,
+    addLegoImages = false,
+    addLegoParts = false,
+    addLegoMinifigs = false,
+    setGlobalError,
+    setGlobalLoading,
+    setModalVisible,
+    onDataUpdated
+) => {
     try {
         const apiUrl = `${Config.API_BASE_URL}/api/lego/sets/create`;
         const token = await AsyncStorage.getItem('token');
         const body = {
-            id: bordId, legoNmbr: legoNmbr, addLegoImages: addLegoImages, addLegoParts: addLegoParts
+            id: bordId,
+            legoNmbr: legoNmbr,
+            addLegoImages: addLegoImages,
+            addLegoParts: addLegoParts,
+            addLegoMinifigs: addLegoMinifigs
         };
 
         const response = await fetch(apiUrl, {
@@ -363,8 +368,6 @@ export const handleSubmitAddSet = async (bordId, legoNmbr, addLegoImages = false
         });
 
         const result = await response.json(); // returns the parsed JSON
-        console.log(result);
-
         if (response.status !== 200) {
             setGlobalError('Adding set unsuccessful: ' + result.message);
             setGlobalLoading(false);
@@ -394,7 +397,7 @@ export const handleSubmitGetSet = async (setId, listId, setGlobalError, setGloba
 
         const result = await response.json(); // returns the parsed JSON
         if (response.status !== 200) {
-            setGlobalError('Adding set unsuccessful: ' + result.message);
+            setGlobalError('Fetching set unsuccessful: ' + result.message);
             setGlobalLoading(false);
         } else {
             setGlobalLoading(false);
@@ -403,39 +406,38 @@ export const handleSubmitGetSet = async (setId, listId, setGlobalError, setGloba
 
     } catch (error) {
         setGlobalLoading(false)
-        setGlobalError('Error adding set: \n' + error.message);
+        setGlobalError('Error fetching set: \n' + error.message);
     }
 };
 
 export const handleSubmitDeleteSetFromSetList = async (setId, bordId, setGlobalError, setGlobalLoading, navigation) => {
     Alert.alert('Delete set', 'Are you sure you want to delete this set?', [{text: 'Cancel', style: 'cancel'}, {
         text: 'Delete', style: 'destructive', onPress: async () => {
-    try {
-        setGlobalLoading(true);
-        const apiUrl = `${Config.API_BASE_URL}/api/lego/list/${bordId}/set/${setId}`;
-        const token = await AsyncStorage.getItem('token');
-        const response = await fetch(apiUrl, {
-            method: 'DELETE', headers: {
-                Authorization: `Bearer ${token}`, Accept: 'application/json',
-            },
-        });
+            try {
+                setGlobalLoading(true);
+                const apiUrl = `${Config.API_BASE_URL}/api/lego/list/${bordId}/set/${setId}`;
+                const token = await AsyncStorage.getItem('token');
+                const response = await fetch(apiUrl, {
+                    method: 'DELETE', headers: {
+                        Authorization: `Bearer ${token}`, Accept: 'application/json',
+                    },
+                });
 
-        const result = await response.json();
-        console.log(result);
-        if (!response.ok) {
-            setGlobalError(result?.message || 'Deleting set from set list unsuccessful');
-            setGlobalLoading(false);
-            return null;
-        }
+                const result = await response.json();
+                if (!response.ok) {
+                    setGlobalError(result?.message || 'Deleting set from set list unsuccessful');
+                    setGlobalLoading(false);
+                    return null;
+                }
 
-        setGlobalLoading(false);
-        navigation.goBack();
+                setGlobalLoading(false);
+                navigation.goBack();
 
-    } catch (error) {
-        setGlobalLoading(false);
-        setGlobalError('Error deleting set from set list:\n' + error.message);
-        return null;
-    }
+            } catch (error) {
+                setGlobalLoading(false);
+                setGlobalError('Error deleting set from set list:\n' + error.message);
+                return null;
+            }
         },
     },], {cancelable: true});
 };
@@ -458,47 +460,61 @@ export const handleSubmitDeleteSetFromSetList = async (setId, bordId, setGlobalE
  *
  * @throws {Error} Logs an error if the profile update process fails. Sets an error message through `setErrorMessage`.
  */
-export const handleSubmitEditProfile = async (userName, firstName, lastName, bio, selectedImage, setGlobalError, setData, setIsEditing, setGlobalLoading, navigation) => {
+export const handleSubmitEditProfile = async (
+    userName,
+    firstName,
+    lastName,
+    bio,
+    selectedImage,
+    setGlobalError,
+    setData,
+    setIsEditing,
+    setGlobalLoading,
+    navigation
+) => {
+
     try {
         const apiUrl = Config.API_BASE_URL + '/api/user-data/edit';
         const token = await AsyncStorage.getItem('token');
 
         const formData = new FormData();
-        formData.append('userName', userName);
-        formData.append('firstName', firstName);
-        formData.append('lastName', lastName);
-        formData.append('bio', bio);
+        formData.append('userName', userName || '');
+        formData.append('firstName', firstName || '');
+        formData.append('lastName', lastName || '');
+        formData.append('bio', bio || '');
 
-        if (selectedImage) {
+        if (selectedImage && typeof selectedImage === 'string') {
             const filename = selectedImage.split('/').pop();
             const match = /\.(\w+)$/.exec(filename);
             const type = match ? `image/${match[1]}` : 'image/jpeg';
-            formData.append('file', {uri: selectedImage, type, name: filename});
-        } else {
-            formData.append('file', '');
+            formData.append('file', { uri: selectedImage, type, name: filename });
         }
 
         const response = await fetch(apiUrl, {
-            method: 'POST', headers: {
-                'Authorization': `Bearer ${token}`, 'Accept': 'application/json', // ✅ expect JSON back
-                // DO NOT set Content-Type, fetch will handle multipart boundaries
-            }, body: formData,
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+            },
+            body: formData,
         });
 
-        const result = await response.json(); // returns the parsed JSON
+        const result = await response.json();
+
         if (response.status !== 200) {
             setGlobalError('Edit profile unsuccessful: ' + result.message);
             setGlobalLoading(false);
         } else {
-            setData(result); // update state in ProfileScreen
+            setData(result);
             setIsEditing(false);
             setGlobalLoading(false);
         }
     } catch (error) {
-        setGlobalLoading(false)
+        setGlobalLoading(false);
         setGlobalError('Error editing profile: \n' + error.message);
     }
 };
+
 
 /**
  * Handles the deletion of a user's profile by sending a DELETE request to the server.
@@ -698,3 +714,42 @@ export const logout = async (logoutAll = false, navigation, setGlobalError, setG
     setGlobalLoading(false);
     navigation.navigate('Login');
 };
+
+export const handleSubmitSetRating = async (setId, rating, setGlobalError, setGlobalLoading) => {
+    try {
+        setGlobalLoading(true);
+
+        const apiUrl = `${Config.API_BASE_URL}/api/lego/sets/rate-set`;
+        const token = await AsyncStorage.getItem('token');
+
+        const body = { setId: String(setId), rating: Number(rating) };
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        });
+
+        setGlobalLoading(false);
+
+        const result = await response.json();
+
+        if (response.status !== 200) {
+            setGlobalError('Adding rating unsuccessful: ' + result.message);
+            return null;
+        }
+
+        // Updated overall rating from backend
+        return result.rating ?? null;
+
+    } catch (error) {
+        setGlobalLoading(false);
+        setGlobalError('Error adding set: ' + error.message);
+        return null;
+    }
+};
+

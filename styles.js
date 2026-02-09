@@ -146,7 +146,7 @@ export const globalStyles = StyleSheet.create({
     titleSetText: {
         fontSize: 21,
         fontWeight: 'bold',
-        marginTop: 8,
+        marginTop: 0,
         marginBottom: 8,
     },
     descriptionText: {
@@ -384,5 +384,24 @@ export const globalStyles = StyleSheet.create({
         borderRadius: 15,
         bottom: 20,
         right: 0,
-    }
+    },
+    //Rating slider
+    containerSlider: {
+        width: "100%",
+    },
+    iconRowSlider: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 10,
+    },
+    labelSlider: {
+        fontWeight: "bold",
+        fontSize: 14,
+        color: '#555',
+    },
+    valueSlider: {
+        marginTop: 8,
+        fontSize: 12,
+        textAlign: "center",
+    },
 });

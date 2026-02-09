@@ -1,10 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from "expo-image-picker";
-import {Alert} from "react-native";
+import {Alert, View, Text, TouchableOpacity} from "react-native";
 import Config from "../config/config";
 import * as ImageManipulator from 'expo-image-manipulator';
 import jwtDecode from "jwt-decode";
-import {refreshToken, handleSubmitDeleteProfile} from "./Apicalls";
+import {refreshToken, handleSubmitDeleteProfile, handleSubmitSetRating} from "./Apicalls";
+import {globalStyles} from "../styles";
+import React, { useState } from "react";
+import Slider from "@react-native-community/slider";
+import { Ionicons } from "@expo/vector-icons";
+import { PanGestureHandler } from "react-native-gesture-handler";
 
 /**
  * Handles the key press event for a given input element.
@@ -462,3 +467,79 @@ export const confirmDelete = (setGlobalLoading, setGlobalError, navigation) => {
         { cancelable: true }
     );
 };
+
+export default function RatingStars({
+                                        rating,
+                                        onChange,
+                                        setId,
+                                        setGlobalLoading,
+                                        setGlobalError,
+                                        readonly = false,
+                                        size = 25,
+                                        showLabel = true,
+                                        style,
+                                        setOverallRating, // optional callback to update overall rating
+                                    }) {
+    const rateSet = async (value) => {
+        if (readonly) return;
+
+        try {
+            const updatedOverall = await handleSubmitSetRating(
+                setId,
+                value,
+                setGlobalError,
+                setGlobalLoading
+            );
+
+            onChange?.(value); // update personal rating
+
+            if (updatedOverall !== null && typeof setOverallRating === 'function') {
+                setOverallRating(updatedOverall); // update general rating
+            }
+
+        } catch (error) {
+            setGlobalError?.("Failed to submit rating");
+        }
+    };
+
+    return (
+        <View style={[globalStyles.containerSlider, style]}>
+            {!readonly && showLabel && (
+                <Text style={globalStyles.labelSlider}>Your Rating:</Text>
+            )}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
+                {[1, 2, 3, 4, 5].map((star) => {
+                    let iconName;
+
+                    if (rating >= star) {
+                        iconName = 'star'; // full star
+                    } else if (rating >= star - 0.5) {
+                        iconName = 'star-half'; // half star
+                    } else {
+                        iconName = 'star-outline'; // empty star
+                    }
+
+                    return (
+                        <TouchableOpacity
+                            key={star}
+                            disabled={readonly}
+                            onPress={() => rateSet(star)}
+                            style={{ marginRight: 2 }}
+                            activeOpacity={readonly ? 1 : 0.7}
+                        >
+                            <Ionicons
+                                name={iconName}
+                                size={size}
+                                color={iconName === 'star-outline' ? '#ccc' : '#f5b301'}
+                            />
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        </View>
+    );
+}
+
+
+

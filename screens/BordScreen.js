@@ -131,7 +131,7 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
             <FlatList
                 data={items}
                 key={viewType} // force re-render when toggling
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => `${item.isSet ? 'set-' : 'item-'}${item.id}`}
                 numColumns={numColumns}
                 contentContainerStyle={globalStyles.listContainer}
                 renderItem={renderItem}

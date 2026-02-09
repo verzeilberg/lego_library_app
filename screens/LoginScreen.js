@@ -1,14 +1,18 @@
-import {TextInput, View, Text, Pressable, TouchableOpacity, Image, KeyboardAvoidingView, Platform} from "react-native";
+import {TextInput, View, Text, Pressable, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Linking} from "react-native";
 import React, {useEffect, useState} from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {globalStyles} from '../styles';
 import {checkToken, togglePasswordVisibility} from '../components/Functions';
 import {handleSubmitLogin} from '../components/Apicalls'
+import Config from "../config/config";
 
 export default function LoginScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);
+    const openApi = () => {
+        Linking.openURL(Config.API_BASE_URL);
+    };
 
     /** Check token when the page is loaded **/
     useEffect(() => {
@@ -78,6 +82,12 @@ export default function LoginScreen({navigation, setGlobalError, setGlobalLoadin
                         <Text style={globalStyles.link}>Forgot password</Text>
                     </Pressable>
                 </View>
+                <Text>For more information, visit our website</Text>
+                <Pressable onPress={openApi}>
+                    <Text style={{ color: "blue", textDecorationLine: "underline" }}>
+                        verzeilberg.nl
+                    </Text>
+                </Pressable>
             </View>
         </KeyboardAvoidingView>
     );
