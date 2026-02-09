@@ -88,6 +88,7 @@ export default function LoginScreen({navigation, setGlobalError, setGlobalLoadin
                         verzeilberg.nl
                     </Text>
                 </Pressable>
+                <Text>Version {Config.VERSION}</Text>
             </View>
         </KeyboardAvoidingView>
     );

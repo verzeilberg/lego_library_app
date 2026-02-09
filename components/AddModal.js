@@ -5,7 +5,6 @@ import {handleSubmitAddEditBoard, handleSubmitAddSet} from "./Apicalls";
 import Config from "../config/config";
 import {selectImage} from "./Functions";
 import {MaterialIcons} from '@expo/vector-icons';
-import {RectangleSwitchMini} from "./RectangleSwitch.js";
 
 export default function AddModal({
                                      modalVisible,
@@ -96,7 +95,7 @@ export default function AddModal({
                 setErrorMessage('No bord ID provided.');
                 return;
             }
-            handleSubmitAddSet(data.bordId, legoNmbr, addLegoImages, addLegoParts, addLegoMinifigs, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated);
+            handleSubmitAddSet(data.bordId, legoNmbr, addLegoImages, addLegoParts, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated);
         } else if (mode === 'edit') {
             if (!data?.id) {
                 setErrorMessage('No bord ID provided for edit.');
@@ -199,19 +198,12 @@ export default function AddModal({
                                     <Text style={{marginRight: 10, fontWeight: 'bold'}}>
                                         Add minifigs
                                     </Text>
-                                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                        <Text style={{marginRight: 10, fontWeight: 'bold'}}>
-                                            Add minifigs
-                                        </Text>
-                                        <RectangleSwitchMini
-                                            value={addLegoMinifigs}
-                                            onChange={toggleSwitch4}
-                                            width={60}
-                                            height={28}
-                                            activeColor="#3dd51e"
-                                            inactiveColor="#ccc"
-                                        />
-                                    </View>
+                                    <Switch
+                                        trackColor={{false: '#767577', true: '#349A20FF'}}
+                                        thumbColor={addLegoMinifigs ? '#3dd51e' : '#f4f3f4'}
+                                        onValueChange={toggleSwitch4}
+                                        value={addLegoMinifigs}
+                                    />
                                 </View>
                             </>
                         ) : (
