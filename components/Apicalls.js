@@ -2,30 +2,48 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from '../config/config';
 import {Alert} from "react-native";
 
+// Build an image object from a local URI for FormData uploads
+const imageFromUri = (uri) => {
+    const name = uri.split('/').pop();
+    const ext = /\.(\w+)$/.exec(name)?.[1] ?? 'jpeg';
+    return {uri, name, type: `image/${ext}`};
+};
+
+// Authenticated fetch — automatically injects the stored Bearer token.
+// Callers can override Authorization in options.headers when a different token is needed.
+const apiFetch = async (path, options = {}) => {
+    const token = await AsyncStorage.getItem('token');
+    return fetch(`${Config.API_BASE_URL}${path}`, {
+        ...options,
+        headers: {
+            'Accept': 'application/json',
+            ...(token ? {'Authorization': `Bearer ${token}`} : {}),
+            ...options.headers,
+        },
+    });
+};
+
 /**
  * Handles the submission of login credentials by making a POST request to the login API.
- * On success, stores the token in local storage and navigates to the Profile screen.
- * On error, updates the error message state.
+ * On success, stores the token in local storage and navigates to the MainTabs screen.
  *
- * @param {string} email - The email address of the user.
- * @param {string} password - The password of the user.
- * @param {object} navigation - The navigation object used to navigate between screens.
- * @param {function} setErrorMessage - Function to update the error message state.
- * @returns {Promise<void>} A promise that resolves when the login process is completed.
+ * @param {string} email
+ * @param {string} password
+ * @param {object} navigation
+ * @param {function} setGlobalError
  */
 export const handleSubmitLogin = async (email, password, navigation, setGlobalError) => {
-    const apiUrl = `${Config.API_BASE_URL}/api/login`;
     try {
-        const response = await fetch(apiUrl, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, password}),
+        const response = await apiFetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email, password}),
         });
 
         const result = await response.json();
         if (response.ok && result.token && result.refresh_token) {
-            // Store both tokens
             await AsyncStorage.setItem('token', result.token);
             await AsyncStorage.setItem('refresh_token', result.refresh_token);
-
             navigation.replace('MainTabs');
         } else {
             setGlobalError('Login unsuccessful: ' + (result.error || 'Unknown error'));
@@ -36,308 +54,240 @@ export const handleSubmitLogin = async (email, password, navigation, setGlobalEr
 };
 
 /**
- * Handles user registration by sending a POST request to the API with the provided registration details.
+ * Handles user registration by sending a POST request to the API.
+ * On success, stores the activation token and navigates to ActivateAccount.
  *
- * @param {string} firstname - The first name of the user.
- * @param {string} lastname - The last name of the user.
- * @param {string} email - The email address of the user.
- * @param {string} password - The password of the user.
- * @param setGlobalError
- * @param setGlobalLoading
- * @param {object} navigation - Navigation object used to navigate between screens in the application.
- *
- * Initiate a POST request to the registration API with user details included in the request body.
- * If the registration is successful, stores the activation token in AsyncStorage and navigates to the 'ActivateAccount' screen.
- * If unsuccessful, set an error message using the `setErrorMessage` function.
- * Logs errors in the console in case of issues during the fetch or JSON parsing process.
+ * @param {string} firstname
+ * @param {string} lastname
+ * @param {string} email
+ * @param {string} password
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {object} navigation
  */
 export const handleSubmitRegistration = async (firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation) => {
-    // API endpoint for registration
-    const apiUrl = Config.API_BASE_URL + '/api/public/user/register';
     try {
-        const response = await fetch(apiUrl, {
-            method: 'POST', headers: {
-                'Content-Type': 'application/json',
-            }, body: JSON.stringify({
-                firstName: firstname, lastName: lastname, email: email, plainPassword: password,
-            })
+        const response = await apiFetch('/api/public/user/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                firstName: firstname, lastName: lastname, email, plainPassword: password,
+            }),
         });
 
         const result = await response.json();
-        if (response.status !== 200) {
-            setGlobalError('Registration unsuccesfull: \n' + result.detail);
-            setGlobalLoading(false);
+        if (!response.ok) {
+            setGlobalError('Registration unsuccessful: \n' + result.detail);
         } else {
-            const token = result.token;
-            AsyncStorage.setItem('activation-token', token);
-            setGlobalLoading(false);
+            await AsyncStorage.setItem('activation-token', result.token);
             navigation.navigate('ActivateAccount');
         }
     } catch (error) {
-        console.error(error);
-        setGlobalLoading(false);
-        setGlobalError('Error registering: ' + error.text);
-    }
-};
-
-/**
- * Handles the submission of an activation code by making an API request
- * to activate a user account.
- *
- * @async
- * @function handleCodeSubmit
- * @param {Array<string>} code - An array of strings representing the activation code digits.
- * @param {Object} navigation - Navigation object used to redirect the user upon successful activation.
- * @param setGlobalError
- * @param setGlobalLoading
- * @throws {Error} Throws an error if an issue occurs during the API call.
- */
-export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlobalLoading) => {
-    const isValid = code.some(value => value.trim() !== "");
-    if (!isValid) {
-        setGlobalError('Code must be 4 digits');
-        return;
-    }
-
-    // API endpoint for activation of the account
-    const apiUrl = Config.API_BASE_URL + '/api/public/user/activate';
-    const activationtoken = await AsyncStorage.getItem('activation-token')
-    const data = {
-        token: activationtoken, code: parseInt(code.join(''), 10)
-    };
-
-    try {
-        fetch(apiUrl, {
-            method: 'POST', headers: {
-                'Content-Type': 'application/json',
-            }, body: JSON.stringify(data)
-        })
-            .then(response => response.json())
-            .then(result => {
-                if (result.token) {
-                    // Store both tokens
-                    AsyncStorage.setItem('token', result.token);
-                    AsyncStorage.setItem('refresh_token', result.refresh_token);
-                    setGlobalLoading(false);
-                    navigation.replace('MainTabs');
-                } else {
-                    setGlobalError(result.message);
-                    setGlobalLoading(false);
-                }
-            })
-            .catch(error => {
-                setGlobalError('Error checking token and code');
-                setGlobalLoading(false);
-            });
-
-    } catch (error) {
-        setGlobalError(error.message);
-        setGlobalLoading(false);
-    }
-};
-
-/**
- * Asynchronous function to handle password submission for user account update.
- * Sends a PATCH request to the API with the new password to update the user data.
- * Navigate the user to the login screen upon successful password update.
- *
- * @async
- * @function
- * @param {string} password - The new password to update the user account.
- * @param {object} navigation - The navigation object for changing application screens.
- * @param setGlobalError
- * @param setGlobalLoading
- * @returns {Promise<void>} Resolves when the password update process completes.
- * @throws Logs errors if API call fails or navigation issues occur.
- */
-export const handlePasswordSubmit = async (password, navigation, setGlobalError, setGlobalLoading) => {
-    // API endpoint for registration
-    const apiUrl = Config.API_BASE_URL + '/api/user/patch';
-    const token = await AsyncStorage.getItem('reset-password-token');
-    // Sending json data
-    const data = {
-        plainPassword: password,
-    };
-
-    try {
-        fetch(apiUrl, {
-            method: 'PATCH', headers: {
-                'Authorization': 'Bearer ' + token, 'Content-Type': 'application/merge-patch+json',
-            }, body: JSON.stringify(data)
-        })
-            .then(response => response.json())
-            .then(result => {
-                AsyncStorage.removeItem('reset-password-token');
-                setGlobalLoading(false);
-                navigation.navigate('Login');
-            })
-            .catch(error => {
-                setGlobalError('Error saving:', error);
-                setGlobalLoading(false);
-            });
-
-    } catch (err) {
-        setGlobalError(err.message);
-        setGlobalLoading(false);
-    }
-};
-
-/**
- * Handles the submission of a forgot password request.
- *
- * This function sends a POST request to the API with the provided email to trigger the forgot password process.
- * If the API returns a token, it stores the token in AsyncStorage and navigates to the ResetPassword screen.
- * If an error occurs or the token is not provided, an error message is set using the `setErrorMessage` function.
- *
- * @param {string} email - The email address associated with the user's account.
- * @param setGlobalError
- * @param setGlobalLoading
- * @param {object} navigation - Navigation object used to redirect the user to the ResetPassword screen.
- */
-export const handleForgotPasswordSubmit = (email, setGlobalError, setGlobalLoading, navigation) => {
-    const apiUrl = Config.API_BASE_URL + '/api/public/user/forgot-password';
-    fetch(apiUrl, {
-        method: 'POST', headers: {
-            'Content-Type': 'application/json', 'Accept': 'application/json',
-        }, body: JSON.stringify({email})
-    })
-        .then(response => response.json())
-        .then(result => {
-            const token = result.token;
-            if (token) {
-                setGlobalLoading(false)
-                AsyncStorage.setItem('reset-password-token', token);
-                setGlobalLoading(false);
-                navigation.navigate('ResetPassword');
-            } else {
-                setGlobalError(result.message);
-                setGlobalLoading(false);
-            }
-        })
-        .catch(error => {
-            setGlobalError('Error login: ' + error.message);
-            setGlobalLoading(false);
-        });
-};
-
-/**
- * Handles the submission of the forgot password code.
- *
- * This function verifies the provided code by sending it to the server along with a token retrieved from storage.
- * If successful, it updates the token and navigates to the "ChangePassword" screen. In case of an error,
- * it updates the error message state.
- *
- * @param {string[]} code - An array of strings representing the forgot password code input by the user.
- * @param setGlobalError
- * @param {object} navigation - The navigation object used to redirect the user to screens within the application.
- * @param setGlobalLoading
- * @returns {Promise<void>} A promise that resolves when the code submission process completes.
- */
-export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navigation, setGlobalLoading) => {
-
-    const isValid = code.some(value => value.trim() !== "");
-    if (!isValid) {
-        setGlobalError('Code must be 4 digits');
-        setGlobalLoading(false);
-        return;
-    }
-
-    // API endpoint for registration
-    const apiUrl = Config.API_BASE_URL + '/api/public/user/check-token-code';
-    const token = await AsyncStorage.getItem('reset-password-token');
-    const data = {
-        token: token, code: parseInt(code.join(''), 10),
-    };
-
-    try {
-        fetch(apiUrl, {
-            method: 'POST', headers: {
-                'Content-Type': 'application/json',
-            }, body: JSON.stringify(data)
-        })
-            .then(response => response.json())
-            .then(result => {
-                if (result.token) {
-                    AsyncStorage.setItem('reset-password-token', result.token)
-                    navigation.navigate('ChangePassword');
-                } else {
-                    setGlobalError(result.message);
-                }
-            })
-            .catch(error => {
-                setGlobalError('Error checking token and code');
-            })
-    } catch (err) {
-        setGlobalError(err.message);
+        setGlobalError('Error registering: ' + error.message);
     } finally {
         setGlobalLoading(false);
     }
 };
+
 /**
- * Asynchronously handles the submission of a new board by sending provided
- * details such as title, description, visibility, and an optional image
- * to the server endpoint. Manages the state and UI updates based on the
- * server's response.
+ * Handles the submission of an activation code.
+ * On success, stores the returned tokens and navigates to MainTabs.
  *
- * @param id
- * @param {string} title - The title of the new board being created.
- * @param {string} description - A description for the new board.
- * @param {boolean} public_private - The visibility flag, typically "public" or "private".
- * @param {string} [selectedImage] - The URI of the selected image file, if one is included.
- * @param setGlobalError
- * @param setGlobalLoading
- * @param {function} setModalVisible - A callback function to control modal visibility.
- * @param {function} onDataUpdated - A callback function triggered when data is successfully updated.
- * @param mode
- * @returns {Promise<void>} Resolves when the submission process completes.
+ * @param {string[]} code - Array of digit strings forming the activation code.
+ * @param {object} navigation
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ */
+export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlobalLoading) => {
+    if (!code.some(value => value.trim() !== "")) {
+        setGlobalError('Code must be 4 digits');
+        return;
+    }
+
+    const activationtoken = await AsyncStorage.getItem('activation-token');
+    const data = {token: activationtoken, code: parseInt(code.join(''), 10)};
+
+    try {
+        const response = await apiFetch('/api/public/user/activate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        if (result.token) {
+            await AsyncStorage.setItem('token', result.token);
+            await AsyncStorage.setItem('refresh_token', result.refresh_token);
+            navigation.replace('MainTabs');
+        } else {
+            setGlobalError(result.message);
+        }
+    } catch (error) {
+        setGlobalError('Error checking token and code');
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Submits a new password using the stored reset token for authorization.
+ * On success, removes the reset token and navigates to Login.
  *
- * @throws {Error} If a network or other operational error occurs during the fetch.
+ * @param {string} password
+ * @param {object} navigation
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ */
+export const handlePasswordSubmit = async (password, navigation, setGlobalError, setGlobalLoading) => {
+    const resetToken = await AsyncStorage.getItem('reset-password-token');
+    try {
+        const response = await apiFetch('/api/user/patch', {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${resetToken}`,
+                'Content-Type': 'application/merge-patch+json',
+            },
+            body: JSON.stringify({plainPassword: password}),
+        });
+
+        await response.json();
+        await AsyncStorage.removeItem('reset-password-token');
+        navigation.navigate('Login');
+    } catch (error) {
+        setGlobalError('Error saving: ' + error.message);
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Sends a forgot-password request. On success, stores the reset token
+ * and navigates to ResetPassword.
+ *
+ * @param {string} email
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {object} navigation
+ */
+export const handleForgotPasswordSubmit = async (email, setGlobalError, setGlobalLoading, navigation) => {
+    try {
+        const response = await apiFetch('/api/public/user/forgot-password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email}),
+        });
+
+        const result = await response.json();
+        if (result.token) {
+            await AsyncStorage.setItem('reset-password-token', result.token);
+            navigation.navigate('ResetPassword');
+        } else {
+            setGlobalError(result.message);
+        }
+    } catch (error) {
+        setGlobalError('Error: ' + error.message);
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Submits the forgot-password verification code. On success, updates the stored
+ * reset token and navigates to ChangePassword.
+ *
+ * @param {string[]} code - Array of digit strings forming the code.
+ * @param {function} setGlobalError
+ * @param {object} navigation
+ * @param {function} setGlobalLoading
+ */
+export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navigation, setGlobalLoading) => {
+    if (!code.some(value => value.trim() !== "")) {
+        setGlobalError('Code must be 4 digits');
+        setGlobalLoading(false);
+        return;
+    }
+
+    const token = await AsyncStorage.getItem('reset-password-token');
+    const data = {token, code: parseInt(code.join(''), 10)};
+
+    try {
+        const response = await apiFetch('/api/public/user/check-token-code', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        if (result.token) {
+            await AsyncStorage.setItem('reset-password-token', result.token);
+            navigation.navigate('ChangePassword');
+        } else {
+            setGlobalError(result.message);
+        }
+    } catch (error) {
+        setGlobalError(error.message);
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Adds or edits a board. Supports optional image upload via multipart form data.
+ * On success, triggers a data refresh and closes the modal.
+ *
+ * @param {string|null} id
+ * @param {string} title
+ * @param {string} description
+ * @param {boolean} public_private
+ * @param {string|null} selectedImage
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {function} setModalVisible
+ * @param {function} onDataUpdated
+ * @param {string} mode - 'add' or 'edit'
  */
 export const handleSubmitAddEditBoard = async (id, title, description, public_private, selectedImage, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated, mode) => {
-    const apiUrl = Config.API_BASE_URL + '/api/set-list';
-    const token = await AsyncStorage.getItem('token');
-
     const formData = new FormData();
     if (id && mode === 'edit') formData.append('id', id);
     if (id && mode === 'add') formData.append('parentId', id);
     formData.append('title', title);
     formData.append('description', description);
     formData.append('publicPrivate', public_private);
-
-    // Only append an image if one is selected
-    if (selectedImage) {
-        // Make sure the selectedImage is a URI like "file:///..."
-        const filename = selectedImage.split('/').pop(); // get file name
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-        formData.append('file', {
-            uri: selectedImage, type: type, name: filename,
-        });
-    }
+    if (selectedImage) formData.append('file', imageFromUri(selectedImage));
 
     try {
-        const response = await fetch(apiUrl, {
-            method: 'POST', headers: {
-                'Authorization': 'Bearer ' + token,
-            }, body: formData,
+        const response = await apiFetch('/api/set-list', {
+            method: 'POST',
+            body: formData,
         });
 
         const result = await response.json();
-        if (response.status !== 200) {
-            setGlobalError('Add board unsuccessfull : \n' + result.message);
-            setGlobalLoading(false)
+        if (!response.ok) {
+            setGlobalError('Add board unsuccessful: \n' + result.message);
         } else {
             onDataUpdated(true);
             setModalVisible(false);
-            setGlobalLoading(false);
         }
     } catch (error) {
         setGlobalError('Error adding board: ' + error.message);
+    } finally {
         setGlobalLoading(false);
     }
 };
 
+/**
+ * Adds a Lego set to a board. On success, triggers a data refresh and closes the modal.
+ *
+ * @param {string} bordId
+ * @param {string} legoNmbr
+ * @param {boolean} [addLegoImages=false]
+ * @param {boolean} [addLegoParts=false]
+ * @param {boolean} [addLegoMinifigs=false]
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {function} setModalVisible
+ * @param {function} onDataUpdated
+ */
 export const handleSubmitAddSet = async (
     bordId,
     legoNmbr,
@@ -350,115 +300,100 @@ export const handleSubmitAddSet = async (
     onDataUpdated
 ) => {
     try {
-        const apiUrl = `${Config.API_BASE_URL}/api/lego/sets/create`;
-        const token = await AsyncStorage.getItem('token');
-        const body = {
-            id: bordId,
-            legoNmbr: legoNmbr,
-            addLegoImages: addLegoImages,
-            addLegoParts: addLegoParts,
-            addLegoMinifigs: addLegoMinifigs
-        };
-
-        const response = await fetch(apiUrl, {
-            method: 'POST', headers: {
-                'Authorization': `Bearer ${token}`, 'Accept': 'application/json', // ✅ expect JSON back
-                // DO NOT set Content-Type, fetch will handle multipart boundaries
-            }, body: JSON.stringify(body),
+        const response = await apiFetch('/api/lego/sets/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id: bordId, legoNmbr, addLegoImages, addLegoParts, addLegoMinifigs}),
         });
 
-        const result = await response.json(); // returns the parsed JSON
-        if (response.status !== 200) {
+        const result = await response.json();
+        if (!response.ok) {
             setGlobalError('Adding set unsuccessful: ' + result.message);
-            setGlobalLoading(false);
-            onDataUpdated();
-            setModalVisible(false);
         } else {
             onDataUpdated();
             setModalVisible(false);
-            setGlobalLoading(false);
         }
-
     } catch (error) {
-        setGlobalLoading(false)
         setGlobalError('Error adding set: \n' + error.message);
+    } finally {
+        setGlobalLoading(false);
     }
 };
 
+/**
+ * Fetches the details of a specific Lego set within a set list.
+ *
+ * @param {string} setId
+ * @param {string} listId
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @returns {Promise<object|undefined>}
+ */
 export const handleSubmitGetSet = async (setId, listId, setGlobalError, setGlobalLoading) => {
     try {
-        const apiUrl = `${Config.API_BASE_URL}/api/lego/set-lists/${listId}/sets/${setId}`;
-        const token = await AsyncStorage.getItem('token');
-        const response = await fetch(apiUrl, {
-            method: 'GET', headers: {
-                'Authorization': `Bearer ${token}`, 'Accept': 'application/json',
-            },
-        });
-
-        const result = await response.json(); // returns the parsed JSON
-        if (response.status !== 200) {
+        const response = await apiFetch(`/api/lego/set-lists/${listId}/sets/${setId}`);
+        const result = await response.json();
+        if (!response.ok) {
             setGlobalError('Fetching set unsuccessful: ' + result.message);
-            setGlobalLoading(false);
         } else {
-            setGlobalLoading(false);
             return result;
         }
-
     } catch (error) {
-        setGlobalLoading(false)
         setGlobalError('Error fetching set: \n' + error.message);
+    } finally {
+        setGlobalLoading(false);
     }
 };
 
+/**
+ * Prompts the user to confirm deletion of a set from a set list, then sends a DELETE request.
+ * On success, navigates back to the previous screen.
+ *
+ * @param {string} setId
+ * @param {string} bordId
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {object} navigation
+ */
 export const handleSubmitDeleteSetFromSetList = async (setId, bordId, setGlobalError, setGlobalLoading, navigation) => {
     Alert.alert('Delete set', 'Are you sure you want to delete this set?', [{text: 'Cancel', style: 'cancel'}, {
         text: 'Delete', style: 'destructive', onPress: async () => {
             try {
                 setGlobalLoading(true);
-                const apiUrl = `${Config.API_BASE_URL}/api/lego/list/${bordId}/set/${setId}`;
-                const token = await AsyncStorage.getItem('token');
-                const response = await fetch(apiUrl, {
-                    method: 'DELETE', headers: {
-                        Authorization: `Bearer ${token}`, Accept: 'application/json',
-                    },
+                const response = await apiFetch(`/api/lego/list/${bordId}/set/${setId}`, {
+                    method: 'DELETE',
                 });
 
                 const result = await response.json();
                 if (!response.ok) {
                     setGlobalError(result?.message || 'Deleting set from set list unsuccessful');
-                    setGlobalLoading(false);
-                    return null;
+                    return;
                 }
 
-                setGlobalLoading(false);
                 navigation.goBack();
-
             } catch (error) {
-                setGlobalLoading(false);
                 setGlobalError('Error deleting set from set list:\n' + error.message);
-                return null;
+            } finally {
+                setGlobalLoading(false);
             }
         },
-    },], {cancelable: true});
+    }], {cancelable: true});
 };
 
 /**
- * Handles the submission of the Edit Profile form by sending updated user data
- * to the server. This function updates user profile details including username,
- * first name, last name, and bio, and optionally uploads a new profile image.
+ * Submits updated profile details including an optional new profile image.
+ * On success, updates the data state and exits editing mode.
  *
- * @param {string} userName - The updated username of the user.
- * @param {string} firstName - The updated first name of the user.
- * @param {string} lastName - The updated last name of the user.
- * @param {string} bio - The updated user bio.
- * @param {string | null} selectedImage - The URI of the selected profile image.
- * @param setGlobalError
- * @param {function} setData - Function to update user data state in the application.
- * @param {function} setIsEditing - Function to toggle the editing state to false after submission.
- * @param setGlobalLoading
- * @param {object} navigation - Used to navigate within the application if needed.
- *
- * @throws {Error} Logs an error if the profile update process fails. Sets an error message through `setErrorMessage`.
+ * @param {string} userName
+ * @param {string} firstName
+ * @param {string} lastName
+ * @param {string} bio
+ * @param {string|null} selectedImage
+ * @param {function} setGlobalError
+ * @param {function} setData
+ * @param {function} setIsEditing
+ * @param {function} setGlobalLoading
+ * @param {object} navigation - reserved for future use
  */
 export const handleSubmitEditProfile = async (
     userName,
@@ -472,88 +407,55 @@ export const handleSubmitEditProfile = async (
     setGlobalLoading,
     navigation
 ) => {
+    const formData = new FormData();
+    formData.append('userName', userName || '');
+    formData.append('firstName', firstName || '');
+    formData.append('lastName', lastName || '');
+    formData.append('bio', bio || '');
+    if (selectedImage && typeof selectedImage === 'string') {
+        formData.append('file', imageFromUri(selectedImage));
+    }
 
     try {
-        const apiUrl = Config.API_BASE_URL + '/api/user-data/edit';
-        const token = await AsyncStorage.getItem('token');
-
-        const formData = new FormData();
-        formData.append('userName', userName || '');
-        formData.append('firstName', firstName || '');
-        formData.append('lastName', lastName || '');
-        formData.append('bio', bio || '');
-
-        if (selectedImage && typeof selectedImage === 'string') {
-            const filename = selectedImage.split('/').pop();
-            const match = /\.(\w+)$/.exec(filename);
-            const type = match ? `image/${match[1]}` : 'image/jpeg';
-            formData.append('file', { uri: selectedImage, type, name: filename });
-        }
-
-        const response = await fetch(apiUrl, {
+        const response = await apiFetch('/api/user-data/edit', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
-            },
             body: formData,
         });
 
         const result = await response.json();
-
-        if (response.status !== 200) {
+        if (!response.ok) {
             setGlobalError('Edit profile unsuccessful: ' + result.message);
-            setGlobalLoading(false);
         } else {
             setData(result);
             setIsEditing(false);
-            setGlobalLoading(false);
         }
     } catch (error) {
-        setGlobalLoading(false);
         setGlobalError('Error editing profile: \n' + error.message);
+    } finally {
+        setGlobalLoading(false);
     }
 };
 
-
 /**
- * Handles the deletion of a user's profile by sending a DELETE request to the server.
+ * Sends a DELETE request to remove the user's profile.
+ * On success, clears stored tokens and navigates to Login.
  *
- * @async
- * @function handleSubmitDeleteProfile
- * @param setGlobalLoading
- * @param setGlobalError
- * @param {Object} navigation - The navigation object for controlling app navigation.
- * @throws Will catch and handle errors that occur during the profile deletion process.
- *
- * This function:
- * - Sets the loading state before processing the request.
- * - Sends a DELETE request to the API endpoint for deleting the user profile.
- * - Utilizes the bearer token for authentication.
- * - Handles various outcomes, including API errors or successful deletion.
- * - After successful deletion, removes stored tokens and navigates the user to the Login screen.
- * - Displays error messages via `setErrorMessage` if the API call or token removal fails.
+ * @param {function} setGlobalLoading
+ * @param {function} setGlobalError
+ * @param {object} navigation
  */
 export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError, navigation) => {
     try {
-        const apiUrl = Config.API_BASE_URL + '/api/user-data/delete';
-        const token = await AsyncStorage.getItem('token');
-
-        const response = await fetch(apiUrl, {
-            method: 'DELETE', headers: {
-                'Authorization': `Bearer ${token}`, 'Accept': 'application/json',
-            },
-        });
+        const response = await apiFetch('/api/user-data/delete', {method: 'DELETE'});
         const result = await response.json();
-        if (response.status !== 200) {
+        if (!response.ok) {
             setGlobalError('Delete profile unsuccessful: ' + result.message);
         } else {
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('refresh_token');
-
             Alert.alert('Account Deleted', 'Your account has been successfully deleted.', [{
                 text: 'OK', onPress: () => navigation.navigate('Login'),
-            },], {cancelable: false});
+            }], {cancelable: false});
         }
     } catch (error) {
         setGlobalError('Error deleting profile: \n' + error.message);
@@ -562,18 +464,23 @@ export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError
     }
 };
 
+/**
+ * Reloads board data from the API and updates the board state.
+ *
+ * @param {string} id
+ * @param {function} setGlobalLoading
+ * @param {function} setBord
+ * @param {function} setGlobalError
+ */
 export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError) => {
     try {
         setGlobalLoading(true);
-        const url = `${Config.API_BASE_URL}/api/set-lists/${id}`;
-        const token = await AsyncStorage.getItem('token');
-        const response = await fetch(url, {
-            method: 'GET', headers: {
-                'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json',
-            },
+        const response = await apiFetch(`/api/set-lists/${id}`, {
+            headers: {'Content-Type': 'application/json'},
         });
+
         const result = await response.json();
-        if (response.status === 200) {
+        if (response.ok) {
             setBord(result);
         } else {
             setGlobalError(result.message || 'Failed to reload bord');
@@ -585,86 +492,60 @@ export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError) 
     }
 };
 
-
 /**
- * Handles the submission for deleting a bord.
+ * Prompts the user to confirm deletion of a board, then sends a DELETE request.
+ * On success, navigates to the Borden screen.
  *
- * This function displays a confirmation alert for deleting a specific bord.
- * If confirmed, it attempts to delete the bord from the server using the DELETE method.
- * Upon success, navigates the user to the main tabs view. In case of failure,
- * an error message is set to inform the user of the issue.
- *
- * @param {string} bordId - The unique identifier of the bord to be deleted.
- * @param setGlobalLoading
- * @param {Object} navigation - The navigation object used to navigate between screens.
- * @param setGlobalError
+ * @param {string} bordId
+ * @param {function} setGlobalLoading
+ * @param {object} navigation
+ * @param {function} setGlobalError
  */
 export const handleSubmitDeleteBord = (bordId, setGlobalLoading, navigation, setGlobalError) => {
     Alert.alert('Delete Bord', 'Are you sure you want to delete this bord?', [{text: 'Cancel', style: 'cancel'}, {
         text: 'Delete', style: 'destructive', onPress: async () => {
             try {
                 setGlobalLoading(true);
-                const apiUrl = `${Config.API_BASE_URL}/api/set-list/delete/${bordId}`;
-                const token = await AsyncStorage.getItem('token');
-
-                const response = await fetch(apiUrl, {
-                    method: 'DELETE', headers: {
-                        'Authorization': `Bearer ${token}`, 'Accept': 'application/json',
-                    },
-                });
-
+                const response = await apiFetch(`/api/set-list/delete/${bordId}`, {method: 'DELETE'});
                 const result = await response.json();
-                if (response.status !== 200) {
-                    const msg = result?.message || 'Failed to delete bord.';
-                    setGlobalError(`Delete unsuccessful: ${msg}`);
+                if (!response.ok) {
+                    setGlobalError(`Delete unsuccessful: ${result?.message || 'Failed to delete bord.'}`);
                     return;
                 }
 
                 Alert.alert('Bord Deleted', 'The bord has been successfully deleted.', [{
                     text: 'OK', onPress: () => navigation.navigate('MainTabs', {screen: 'Borden'}),
-                },], {cancelable: false});
+                }], {cancelable: false});
             } catch (error) {
                 setGlobalError('Error deleting bord:\n' + error.message);
             } finally {
                 setGlobalLoading(false);
             }
         },
-    },], {cancelable: true});
+    }], {cancelable: true});
 };
 
 /**
- * Asynchronously refreshes an authentication token using a refresh token stored in local storage.
+ * Refreshes the authentication token using the stored refresh token.
  *
- * The function retrieves the refresh token from async storage and sends it to the server to obtain a new access token.
- * If successful, it updates the stored tokens (access token and refresh token) in async storage. If the refresh token
- * is unavailable or if the server response is invalid, the function returns null.
- *
- * @returns {Promise<string|null>} A promise resolving to the new access token if successful, or null if refresh fails.
- *
- * @throws {Error} Logs an error if an issue occurs during refresh operations, such as network errors.
+ * @returns {Promise<string|null>} The new access token, or null on failure.
  */
 export const refreshToken = async () => {
     try {
         const refresh = await AsyncStorage.getItem("refresh_token");
         if (!refresh) return null;
 
-        const apiUrl = `${Config.API_BASE_URL}/api/token/refresh`;
-
-        const response = await fetch(apiUrl, {
+        const response = await apiFetch('/api/token/refresh', {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({refreshToken: refresh}),
         });
 
-        if (!response.ok) {
-            return null;
-        }
+        if (!response.ok) return null;
 
         const data = await response.json();
-        // Save both new access + refresh tokens
         await AsyncStorage.setItem("token", data.token);
         await AsyncStorage.setItem("refresh_token", data.refreshToken);
-
         return data.token;
     } catch (e) {
         console.error("Error refreshing token", e);
@@ -672,84 +553,221 @@ export const refreshToken = async () => {
     }
 };
 
-
 /**
- * Logs the user out of the application and optionally revokes access for all devices.
+ * Logs the user out, optionally revoking all devices.
+ * Clears local tokens and navigates to Login regardless of server response.
  *
- * This function performs the following steps:
- * - Retrieves the stored authentication tokens from AsyncStorage.
- * - Sends a request to the server to revoke the authentication token(s). If `logoutAll`
- *   is set to true, it will revoke access for all devices.
- * - Clears the authentication tokens from local storage.
- * - Navigates the user to the login screen.
- *
- * @param {boolean} [logoutAll=false] - Indicates whether logout should invalidate sessions across all devices.
- * @param {Object} navigation - The navigation object used to redirect the user to the login screen.
- * @throws Will display an alert if the logout request fails.
+ * @param {boolean} [logoutAll=false]
+ * @param {object} navigation
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
  */
 export const logout = async (logoutAll = false, navigation, setGlobalError, setGlobalLoading) => {
-    const refresh = await AsyncStorage.getItem("refresh_token");
-    const token = await AsyncStorage.getItem("token");
+    try {
+        const refresh = await AsyncStorage.getItem("refresh_token");
+        const response = await apiFetch('/api/logout', {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({refreshToken: refresh, allDevices: logoutAll}),
+        });
 
-    const apiUrl = `${Config.API_BASE_URL}/api/logout`
-
-    // Call backend to revoke token(s)
-    const response = await fetch(apiUrl, {
-        method: "POST", headers: {
-            "Content-Type": "application/json", ...(token ? {"Authorization": `Bearer ${token}`} : {}),
-        }, body: JSON.stringify({
-            refreshToken: refresh, allDevices: logoutAll,
-        }),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-        const errorMessage = typeof data === "string" ? data : data.message || JSON.stringify(data);
-        setGlobalError(errorMessage);
+        const data = await response.json();
+        if (!response.ok) {
+            const errorMessage = typeof data === "string" ? data : data.message || JSON.stringify(data);
+            setGlobalError(errorMessage);
+        }
+    } catch (error) {
+        setGlobalError('Error logging out: ' + error.message);
+    } finally {
+        await AsyncStorage.removeItem("token");
+        await AsyncStorage.removeItem("refresh_token");
+        setGlobalLoading(false);
+        navigation.navigate('Login');
     }
-
-    // Clear local storage
-    await AsyncStorage.removeItem("token");
-    await AsyncStorage.removeItem("refresh_token");
-    setGlobalLoading(false);
-    navigation.navigate('Login');
 };
 
+/**
+ * Submits a rating for a specific Lego set.
+ *
+ * @param {string|number} setId
+ * @param {number} rating
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @returns {Promise<number|null>} The updated rating, or null on failure.
+ */
 export const handleSubmitSetRating = async (setId, rating, setGlobalError, setGlobalLoading) => {
     try {
         setGlobalLoading(true);
-
-        const apiUrl = `${Config.API_BASE_URL}/api/lego/sets/rate-set`;
-        const token = await AsyncStorage.getItem('token');
-
-        const body = { setId: String(setId), rating: Number(rating) };
-
-        const response = await fetch(apiUrl, {
+        const response = await apiFetch('/api/lego/sets/rate-set', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({setId: String(setId), rating: Number(rating)}),
         });
 
-        setGlobalLoading(false);
-
         const result = await response.json();
-
-        if (response.status !== 200) {
+        if (!response.ok) {
             setGlobalError('Adding rating unsuccessful: ' + result.message);
             return null;
         }
 
-        // Updated overall rating from backend
         return result.rating ?? null;
-
     } catch (error) {
-        setGlobalLoading(false);
         setGlobalError('Error adding set: ' + error.message);
+        return null;
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Saves the defect state for a selected part (missing, damaged, discolored quantities).
+ * Validates totals before submitting and updates the set state on success.
+ *
+ * @param {object} selectedPart
+ * @param {function} setSavingPart
+ * @param {function} setSet
+ * @param {function} setModalVisible
+ * @param {function} setGlobalError
+ */
+export const savePartState = async (selectedPart, setSavingPart, setSet, setModalVisible, setGlobalError) => {
+    if (!selectedPart) return;
+
+    const totalCount =
+        (selectedPart.missingQuantity ?? 0) +
+        (selectedPart.damagedQuantity ?? 0) +
+        (selectedPart.discolouredQuantity ?? 0);
+
+    if (totalCount > (selectedPart.quantity ?? 0)) {
+        setGlobalError(`Cannot save: total selected (${totalCount}) exceeds available quantity (${selectedPart.quantity}).`);
+        return;
+    }
+
+    setSavingPart(true);
+    try {
+        const response = await apiFetch('/api/lego/set/part/defect/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                userSet: `/api/lego/user-sets/${selectedPart.userSetId}`,
+                setPart: `/api/lego/set-parts/${selectedPart.setPartId}`,
+                missingQuantity: selectedPart.missingQuantity ?? 0,
+                damagedQuantity: selectedPart.damagedQuantity ?? 0,
+                discolouredQuantity: selectedPart.discolouredQuantity ?? 0,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Unknown API error");
+        }
+
+        const data = await response.json();
+        setSet(prev => ({
+            ...prev,
+            setParts: prev.setParts.map(p =>
+                p.userSetPartId.toString() === selectedPart.userSetPartId.toString()
+                    ? {...p, ...data}
+                    : p
+            ),
+        }));
+
+        setModalVisible(false);
+    } catch (err) {
+        console.error(err);
+        setGlobalError("Failed to save part state.");
+    } finally {
+        setSavingPart(false);
+    }
+};
+
+/**
+ * Uploads one or more images to a specific Lego set within a set list.
+ *
+ * @param {object[]} images - Array of image assets with uri and optional type fields.
+ * @param {string} setNumber
+ * @param {string} listId
+ * @param {function} setGlobalError
+ * @returns {Promise<object[]|null>}
+ */
+export const uploadImagesToSet = async (images, setNumber, listId, setGlobalError) => {
+    if (!images || images.length === 0) return [];
+
+    const formData = new FormData();
+    images.forEach((asset, i) => {
+        formData.append("files[]", {
+            uri: asset.uri,
+            type: asset.type || "image/jpeg",
+            name: `image_${Date.now()}_${i}.jpg`,
+        });
+    });
+
+    try {
+        const response = await apiFetch(`/api/lego/set-lists/${listId}/sets/${setNumber}/add-images`, {
+            method: "POST",
+            headers: {"Content-Type": "multipart/form-data"},
+            body: formData,
+        });
+
+        const data = await response.json();
+        if (data.error) {
+            setGlobalError("Upload Error: " + data.error);
+            return null;
+        }
+
+        return data;
+    } catch (error) {
+        setGlobalError("Upload Error: " + error.message);
         return null;
     }
 };
 
+/**
+ * Fetches the current user's profile data from the API.
+ *
+ * @param {function} setData
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ */
+export const fetchData = async (setData, setGlobalError, setGlobalLoading) => {
+    try {
+        const response = await apiFetch('/api/user-data', {
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            setGlobalError(`HTTP error! Status: ${response.status}`);
+            return;
+        }
+
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Fetches the list of set lists from the API.
+ *
+ * @param {function} setData
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ */
+export const fetchModelLists = async (setData, setGlobalError, setGlobalLoading) => {
+    try {
+        const response = await apiFetch('/api/set-lists', {
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+    } finally {
+        setGlobalLoading(false);
+    }
+};

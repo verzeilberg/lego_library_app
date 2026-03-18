@@ -1,10 +1,11 @@
 import {TextInput, View, Text, Pressable, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Linking} from "react-native";
 import React, {useEffect, useState} from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import {globalStyles} from '../styles';
-import {checkToken, togglePasswordVisibility} from '../components/Functions';
-import {handleSubmitLogin} from '../components/Apicalls'
-import Config from "../config/config";
+import {globalStyles} from '../../styles';
+import {checkToken} from '../../utils/authUtils';
+import {togglePasswordVisibility} from '../../utils/passwordUtils';
+import {handleSubmitLogin} from '../../components/Apicalls'
+import Config from "../../config/config";
 
 export default function LoginScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export default function LoginScreen({navigation, setGlobalError, setGlobalLoadin
             <View style={globalStyles.container}>
                 <Image
                     style={globalStyles.stretch}
-                    source={require('../assets/images/lego_logo.png')}
+                    source={require('../../assets/images/lego_logo.png')}
                 />
 
                 <Text style={globalStyles.paragraph.right}>Please login to get acces to your account!</Text>

@@ -1,10 +1,10 @@
 import { View, Text, Image, FlatList, TouchableOpacity, Dimensions } from 'react-native';
 import React, {useCallback, useEffect, useState} from 'react';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
-import { globalStyles } from '../styles';
-import Config from '../config/config';
-import AddModal from '../components/AddModal';
-import { handleSubmitDeleteBord, reloadData as reloadBordData } from "../components/Apicalls";
+import { globalStyles } from '../../../styles';
+import Config from '../../../config/config';
+import AddModal from '../../../components/modals/AddModal';
+import { handleSubmitDeleteBord, reloadData as reloadBordData } from "../../../components/Apicalls";
 import {useFocusEffect} from "@react-navigation/native";
 
 export default function BordScreen({ route, navigation, setGlobalError, setGlobalLoading }) {

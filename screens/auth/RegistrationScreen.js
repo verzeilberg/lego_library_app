@@ -1,17 +1,48 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {View, TextInput, Button, Text, Pressable, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import {checkPassword, handleGeneratePassword, togglePasswordVisibility} from "../components/Functions";
-import {handlePasswordSubmit} from "../components/Apicalls";
-import {globalStyles} from "../styles";
+import {handleGeneratePassword, togglePasswordVisibility, checkPassword} from '../../utils/passwordUtils';
+import {handleSubmitRegistration} from '../../components/Apicalls'
+import {globalStyles} from '../../styles';
 
-export default function ChangePasswordScreen({route, navigation, setGlobalError, setGlobalLoading}) {
+export default function RegistrationScreen({navigation, setGlobalError, setGlobalLoading}) {
+    const [firstname, setFirstname] = useState('');
+    const [lastname, setLastname] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);
 
+    useEffect(() => {
+        setGlobalLoading(false);
+    }, []);
+
     return (
         <View style={globalStyles.container}>
+            <TextInput
+                style={globalStyles.input}
+                placeholder="Firstname"
+                onChangeText={text => setFirstname(text)}
+                value={firstname}
+            />
+            <TextInput
+                style={globalStyles.input}
+                placeholder="Lastname"
+                onChangeText={text => setLastname(text)}
+                value={lastname}
+            />
+            <TextInput
+                style={globalStyles.input}
+                placeholder="Email"
+                type="email"
+                onChangeText={text => setEmail(text)}
+                value={email}
+                autoComplete="email"
+                textContentType="emailAddress"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+            />
             <View style={[globalStyles.input, globalStyles.inputContainer]}>
                 <TextInput
                     style={globalStyles.inputPassword}
@@ -20,7 +51,8 @@ export default function ChangePasswordScreen({route, navigation, setGlobalError,
                     value={password}
                     onChangeText={setPassword}
                 />
-                <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}style={globalStyles.icon}>
+                <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}
+                                  style={globalStyles.icon}>
                     <Icon name={isSecure ? 'eye-slash' : 'eye'} size={20} color="#000"/>
                 </TouchableOpacity>
             </View>
@@ -32,28 +64,31 @@ export default function ChangePasswordScreen({route, navigation, setGlobalError,
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                 />
-                <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}style={globalStyles.icon}>
+                <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}
+                                  style={globalStyles.icon}>
                     <Icon name={isSecure ? 'eye-slash' : 'eye'} size={20} color="#000"/>
                 </TouchableOpacity>
+
             </View>
 
             {/* Button to trigger password generation */}
             <View style={globalStyles.buttonContainer}>
                 <Button title="Generate Password" onPress={() => handleGeneratePassword(setPassword)}/>
             </View>
-
             <Pressable
                 style={globalStyles.button}
                 onPress={() => {
                     const doPasswordMatch = checkPassword(password, confirmPassword, setGlobalError);
                     if (doPasswordMatch) {
                         setGlobalLoading(true);
-                        handlePasswordSubmit(password, navigation, setGlobalError, setGlobalLoading)
+                        handleSubmitRegistration(firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation);
                     }
+
                 }}
             >
-                <Text style={globalStyles.text}>Save</Text>
+                <Text style={globalStyles.text}>Register</Text>
             </Pressable>
         </View>
     );
 };
+

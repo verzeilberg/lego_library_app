@@ -1,10 +1,11 @@
 import React, {useEffect, useState} from 'react';
 import {View, Text, Image, TouchableOpacity, StyleSheet, Pressable} from 'react-native';
-import Config from "../config/config";
-import {globalStyles} from '../styles';
-import {fetchData, confirmDelete, selectImage} from "../components/Functions";
-import FloatingLabelInput from "../components/FloatingLabelInput";
-import {handleSubmitEditProfile} from "../components/Apicalls";
+import Config from "../../config/config";
+import {globalStyles} from '../../styles';
+import {confirmDelete } from "../../services/profileService";
+import {selectImage} from "../../utils/imageUtils";
+import FloatingLabelInput from "../../components/form/FloatingLabelInput";
+import {handleSubmitEditProfile, fetchData} from "../../components/Apicalls";
 import Icon from "react-native-vector-icons/FontAwesome";
 
 const ProfileScreen = ({navigation, setGlobalLoading, setGlobalError}) => {

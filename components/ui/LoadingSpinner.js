@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Modal} from 'react-native';
 import LottieView from 'lottie-react-native';
-import spinner from '../components/spinners/spinner.json';
+import spinner from '../spinners/spinner.json';
 
 /**
  * LoadingSpinner Component

@@ -6,7 +6,7 @@ const Config = {
      * It is used throughout the application to build full API request URLs.
      * @constant {string}
      */
-    API_BASE_URL: 'http://192.168.2.31',
+    API_BASE_URL: 'http://10.1.1.226',
 
     /**
      * The name of the application.

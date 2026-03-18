@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, Animated } from 'react-native';
-import { globalStyles } from '../styles';
+import { globalStyles } from '../../styles';
 
 export default function FloatingLabelInput({ placeholder, value, onChangeText, multiline = false }) {
     const [isFocused, setIsFocused] = useState(false);

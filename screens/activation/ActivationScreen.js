@@ -1,9 +1,8 @@
 import React, {useState, useRef} from 'react';
 import {View, TextInput, Text, Pressable} from 'react-native';
-import {globalStyles} from "../styles";
-import {handleCodeSubmit} from "../components/Apicalls";
-import {handleChange} from "../components/Functions";
-import {handleKeyPress} from "../components/Functions";
+import {globalStyles} from "../../styles";
+import {handleCodeSubmit} from "../../components/Apicalls";
+import {handleKeyPress, handleChange} from "../../utils/formUtils";
 
 export default function FourDigitCodeInput({navigation, setGlobalError, setGlobalLoading}) {
     const [code, setCode] = useState(['', '', '', '']);

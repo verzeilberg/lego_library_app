@@ -1,45 +1,38 @@
+/**
+ * =========================================================
+ * Imports
+ * =========================================================
+ */
+import { Alert, View, Text, TouchableOpacity } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from "expo-image-picker";
-import {Alert, View, Text, TouchableOpacity} from "react-native";
-import Config from "../config/config";
 import * as ImageManipulator from 'expo-image-manipulator';
 import jwtDecode from "jwt-decode";
-import {refreshToken, handleSubmitDeleteProfile, handleSubmitSetRating} from "./Apicalls";
-import {globalStyles} from "../styles";
-import React, { useState } from "react";
-import Slider from "@react-native-community/slider";
 import { Ionicons } from "@expo/vector-icons";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { refreshToken, handleSubmitDeleteProfile, handleSubmitSetRating, uploadImagesToSet } from "./Apicalls";
+import { globalStyles } from "../styles";
 
 /**
- * Handles the key press event for a given input element.
- *
- * @param {object} e - The event object associated with the key press event.
- * @param {number} index - The index of the input element in the inputRefs array.
- *
- * The function listens for the 'Backspace' key press event and,
- * if the associated input element at the given index is empty,
- * it shifts the focus to the previous input element in the array.
+ * =========================================================
+ * Authentication / Token Utilities
+ * =========================================================
  */
-export const handleKeyPress = (e, index, code, inputRefs) => {
-    if (e.nativeEvent.key === 'Backspace' && code[index] === '' && index > 0) {
-        inputRefs.current[index - 1].focus();
-    }
-};
 
 
 /**
- * Asynchronously checks the token stored in AsyncStorage to verify its validity and redirects
- * the user to the appropriate screen based on the token's status. If the token is missing,
- * expired, or invalid, the user is redirected to the "Login" screen. If the token is valid
- * or successfully refreshed, the user is redirected to the "Profile" screen.
+ * Checks the stored JWT token and determines whether the user
+ * should be redirected to login or allowed into the app.
  *
- * @param {object} navigation - The navigation object used for redirecting the user to different screens.
- * @param setGlobalError
- * @param setGlobalLoading
+ * Behavior:
+ * - Retrieves token from AsyncStorage
+ * - Decodes token to check expiration
+ * - Attempts token refresh if expired
+ * - Redirects to Login if refresh fails
+ * - Redirects to MainTabs if token is valid
  *
- * @async
- * @throws {Error} If there's an issue retrieving or decoding the token, or during token refresh operations.
+ * @param {object} navigation - React Navigation object for routing.
+ * @param {Function} setGlobalError - Global error state setter.
+ * @param {Function} setGlobalLoading - Global loading state setter.
  */
 export const checkToken = async (navigation, setGlobalError, setGlobalLoading) => {
     try {
@@ -53,13 +46,16 @@ export const checkToken = async (navigation, setGlobalError, setGlobalLoading) =
 
         // Decode token and check expiry
         const decoded = jwtDecode(token);
+
         //@todo restore code
         //const now = Date.now().valueOf() / 1000;
         const now = (Date.now().valueOf() / 1000) + 999999;
 
         if (decoded.exp && decoded.exp < now) {
-            // Try to refresh the token
+
+            // Attempt to refresh expired token
             const newToken = await refreshToken(token);
+
             if (newToken) {
                 await AsyncStorage.setItem("token", newToken);
                 setGlobalLoading(false);
@@ -69,11 +65,13 @@ export const checkToken = async (navigation, setGlobalError, setGlobalLoading) =
                 setGlobalLoading(false);
                 navigation.navigate("Login");
             }
+
         } else {
             setGlobalError(null);
             setGlobalLoading(false);
             navigation.replace("MainTabs");
         }
+
     } catch (error) {
         navigation.navigate("Login");
     } finally {
@@ -82,46 +80,15 @@ export const checkToken = async (navigation, setGlobalError, setGlobalLoading) =
 };
 
 
-
-
 /**
- * Toggles the visibility of a password field by inverting the current secure state.
+ * Validates that password and confirmPassword match.
  *
- * @param {boolean} isSecure - The current state indicating whether the password field is secure (hidden).
- * @param {Function} setIsSecure - A function to update the state of the password field's visibility.
- */
-export const togglePasswordVisibility = (isSecure, setIsSecure) => {
-    setIsSecure(!isSecure);
-};
-
-// Function to generate a strong password
-export const generatePassword = (length = 12) => {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+<>?';
-    let newPassword = '';
-    for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * chars.length);
-        newPassword += chars[randomIndex];
-    }
-    return newPassword;
-};
-
-/**
- * Handles the generation of a new password and updates the state with the generated password.
+ * If they do not match, an error message will be set.
  *
- * @function
- * @param {Function} setPassword - A setter function used to update the password state.
- */
-export const handleGeneratePassword = (setPassword) => {
-    const generatedPassword = generatePassword(16); // Suggest 16 character passwords
-    setPassword(generatedPassword);
-};
-
-/**
- * Validates if the password and confirmPassword match.
- *
- * @param {string} password - The main password.
- * @param {string} confirmPassword - The password to confirm.
- * @param setGlobalError
+ * @param {string} password - Primary password.
+ * @param {string} confirmPassword - Confirmation password.
+ * @param {Function} setGlobalError - Error state setter.
+ * @returns {boolean} True if valid, false otherwise.
  */
 export const checkPassword = (password, confirmPassword, setGlobalError) => {
     if (password === confirmPassword && password.length > 0) {
@@ -132,170 +99,50 @@ export const checkPassword = (password, confirmPassword, setGlobalError) => {
     }
 };
 
+
 /**
- * A function to handle changes in input fields.
- *
- * The function updates the array of codes with new input text at the specified index.
- * If the length of the text is one character and the current index is less than 3,
- * it automatically moves the focus to the next input field.
- *
- * @param {string} text - The new input text entered by the user.
- * @param {number} index - The index of the input field being modified.
- * @param {Function} setCode - A state updating function to update the code array.
+ * =========================================================
+ * Image Utilities
+ * =========================================================
  */
-export const handleChange = (text, index, code,  setCode, inputRefs) => {
-    const newCode = [...code];
-    newCode[index] = text;
 
-    if (text.length === 1 && index < 3) {
-        inputRefs.current[index + 1].focus();
-    }
-    setCode(newCode);
-};
 
 /**
- * Processes an image by resizing, compressing, and adding a cache-busting query parameter.
+ * Processes an image before uploading.
  *
- * This function takes an image URI, resizes the image to a maximum width of 800 pixels,
- * compresses it to reduce file size, and ensures the image is saved in JPEG format.
- * Additionally, a cache-busting timestamp is appended to the output URI to prevent
- * caching issues.
+ * Actions performed:
+ * - Resizes image to max width 800px
+ * - Compresses to reduce file size
+ * - Converts to JPEG
+ * - Adds cache busting query string
  *
- * @param {string} uri - The URI of the image to process.
- * @returns {Promise<string>} A promise that resolves to the processed image URI with a cache-busting query parameter.
+ * @param {string} uri - Image URI.
+ * @returns {Promise<string>} Processed image URI.
  */
 const processImage = async (uri) => {
-    // Verklein en comprimeer de afbeelding om sneller te laden
     const manipulated = await ImageManipulator.manipulateAsync(
         uri,
-        [{ resize: { width: 800 } }], // Max 800px breed
+        [{ resize: { width: 800 } }],
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
     );
 
-    // Voeg cache-busting toe
     return manipulated.uri + `?t=${Date.now()}`;
 };
 
-/**
- *
- * @param images
- * @param setNumber
- * @param listId
- * @param setGlobalError
- * @returns {Promise<any|null>}
- */
-export const uploadImagesToSet = async (images, setNumber, listId, setGlobalError) => {
-    if (!images || images.length === 0) return [];
-
-    const formData = new FormData();
-
-    images.forEach((asset, i) => {
-        formData.append("files[]", {
-            uri: asset.uri,
-            type: asset.type || "image/jpeg",
-            name: `image_${Date.now()}_${i}.jpg`,
-        });
-    });
-
-
-
-    try {
-        const apiUrl = `${Config.API_BASE_URL}/api/lego/set-lists/${listId}/sets/${setNumber}/add-images`;
-        const token = await AsyncStorage.getItem("token");
-
-        const response = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "multipart/form-data",
-            },
-            body: formData,
-        });
-
-        const data = await response.json();
-        if (data.error) {
-            setGlobalError("Upload Error", data.error);
-            return null;
-        }
-
-        return data; // Should be an array of uploaded images
-    } catch (error) {
-        setGlobalError("Upload Error", data.error);
-        return null;
-    }
-};
-
-export const fetchData = async (setData, setGlobalError, setGlobalLoading) => {
-    const token = await AsyncStorage.getItem('token');
-    const apiUrl = Config.API_BASE_URL + '/api/user-data';
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token,
-            },
-        });
-        if (!response) {
-            setGlobalError(`HTTP error! Status: ${response.status}`);
-        }
-        const jsonData = await response.json();
-        setData(jsonData);
-    } catch (error) {
-        setGlobalError(error.message || 'Something went wrong!');
-    } finally {
-        setGlobalLoading(false);
-    }
-};
 
 /**
- * Fetches a list of models from the API.
+ * Opens the device camera to capture a photo.
  *
- * This asynchronous function retrieves model data from a specified API endpoint and manages tokens, errors, and loading state. The data is fetched using a GET request with an authorization token obtained from AsyncStorage.
+ * Behavior:
+ * - Requests camera permission
+ * - Opens camera UI
+ * - Allows editing
  *
- * @param {Function} setData - A callback function to handle and store successfully fetched data.
- * @param setGlobalError
- * @param setGlobalLoading
- */
-export const fetchModelLists= async (setData, setGlobalError, setGlobalLoading) => {
-    const token = await AsyncStorage.getItem('token');
-    const apiUrl = Config.API_BASE_URL + '/api/set-lists';
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            },
-        });
-        if (!response) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const jsonData = await response.json();
-        setData(jsonData);
-    } catch (error) {
-        setGlobalError(error.message || 'Something went wrong!');
-        setGlobalLoading(false)
-    } finally {
-        setGlobalLoading(false); // Stop loading after the fetch is complete
-    }
-};
-
-/**
- * Opens the camera on the user's device to capture an image without uploading it.
- *
- * This function requests camera permissions from the user and, if granted, launches the camera
- * to allow the user to take a photo. The photo can then be edited before being finalized.
- * If the permission is denied, an alert is displayed and the function returns an object
- * indicating the operation was cancelled.
- *
- * @async
- * @function
- * @returns {Promise<Object>} A promise that resolves to an object containing details of the captured image
- * or an object with { cancelled: true } if the operation was cancelled.
+ * @returns {Promise<object>} Camera result or cancelled object.
  */
 export const openCameraWithoutUpload = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
     if (!permissionResult.granted) {
         alert('Camera permission is required!');
         return { cancelled: true };
@@ -310,54 +157,55 @@ export const openCameraWithoutUpload = async () => {
     return result;
 };
 
+
 /**
- * Opens the device's image library to allow the user to select an image without uploading it.
+ * Opens the device image library to select images.
  *
- * This function requests permission to access the media library. If the permission is denied,
- * an alert is displayed to inform the user, and the function returns an object indicating the operation
- * was cancelled. If the permission is granted, the function launches the device's image library where the
- * user can select an image. The selected image can be edited according to specified options,
- * such as aspect ratio and quality.
+ * Options:
+ * - Allows editing
+ * - Multiple selection
+ * - Selection limits
  *
- * @async
- * @function
- * @returns {Promise<object>} A promise that resolves to an object containing details of the selected image, or
- * an object with a `cancelled` property set to `true` if the user did not grant permission or cancelled the operation.
+ * @param {boolean} allowsEditing
+ * @param {number} selectionLimit
+ * @param {boolean} allowMultiple
+ *
+ * @returns {Promise<object>} Image picker result.
  */
 export const openImageLibraryWithoutUpload = async (
     allowsEditing = false,
     selectionLimit = 0,
     allowMultiple = true
 ) => {
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
         Alert.alert('Permission required', 'Media library permission is required!');
         return { canceled: true };
     }
+
     const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-
         allowsEditing: allowsEditing,
         allowsMultipleSelection: allowMultiple,
         selectionLimit: selectionLimit,
-
         quality: 1,
     });
 
-    return result; // assets always here
+    return result;
 };
 
+
 /**
- * Prompts the user to select an option for obtaining an image.
- * Displays an alert with options to either take a photo using the camera,
- * pick an image from the library, or cancel the operation. The method returns
- * a promise that resolves to the selected image data or an indication that
- * the operation was canceled.
+ * Displays an option dialog for selecting a single image.
  *
- * @function
- * @returns {Promise<Object>} A promise that resolves to an object containing the image data
- * or an object with a cancelled flag when the user cancels the operation.
+ * Options:
+ * - Take a photo
+ * - Select from library
+ * - Cancel
+ *
+ * @returns {Promise<object>} Image result or cancelled object.
  */
 export const selectImage = () => {
     return new Promise((resolve) => {
@@ -373,38 +221,59 @@ export const selectImage = () => {
     });
 };
 
+
+/**
+ * Handles selecting and uploading multiple images.
+ *
+ * Workflow:
+ * 1. User chooses camera or library
+ * 2. Images are processed (resize/compress)
+ * 3. Images are uploaded to the backend
+ *
+ * @param setNumber
+ * @param bordId
+ * @param setGlobalError
+ * @param setGlobalLoading
+ *
+ * @returns {Promise<object>}
+ */
 export const selectMultipleImage = async (setNumber, bordId, setGlobalError, setGlobalLoading) => {
     return new Promise((resolve) => {
+
         const handleAsyncWork = async (input, isCamera = false) => {
             try {
+
                 setGlobalLoading(true);
 
                 let assetsArray;
 
                 if (isCamera) {
-                    // Camera result might be a single object or an array of assets
                     if (input.assets && input.assets.length > 0) {
-                        // New API style
                         assetsArray = input.assets;
                     } else if (input.uri) {
-                        // Old API style
                         assetsArray = [input];
                     } else {
                         throw new Error("No valid URI found from camera");
                     }
                 } else {
-                    assetsArray = input; // library result
+                    assetsArray = input;
                 }
 
-                // Process all images
                 const processedImages = await Promise.all(
-                    assetsArray.map(asset => processImage(asset.uri).then(uri => ({ uri })))
+                    assetsArray.map(asset =>
+                        processImage(asset.uri).then(uri => ({ uri }))
+                    )
                 );
 
-                // Upload all images at once
-                const uploadedResults = await uploadImagesToSet(processedImages, setNumber, bordId, setGlobalError);
+                const uploadedResults = await uploadImagesToSet(
+                    processedImages,
+                    setNumber,
+                    bordId,
+                    setGlobalError
+                );
 
                 resolve({ cancelled: false, uploaded: uploadedResults });
+
             } catch (error) {
                 setGlobalError(error?.message);
                 resolve({ cancelled: true });
@@ -421,10 +290,12 @@ export const selectMultipleImage = async (setNumber, bordId, setGlobalError, set
                     text: "Camera",
                     onPress: async () => {
                         const result = await openCameraWithoutUpload();
+
                         if (result?.cancelled) {
                             resolve({ cancelled: true });
                             return;
                         }
+
                         handleAsyncWork(result, true);
                     },
                 },
@@ -432,10 +303,12 @@ export const selectMultipleImage = async (setNumber, bordId, setGlobalError, set
                     text: "Bibliotheek",
                     onPress: async () => {
                         const result = await openImageLibraryWithoutUpload(false, 10, true);
+
                         if (result?.canceled || !result.assets?.length) {
                             resolve({ cancelled: true });
                             return;
                         }
+
                         handleAsyncWork(result.assets, false);
                     },
                 },
@@ -448,16 +321,31 @@ export const selectMultipleImage = async (setNumber, bordId, setGlobalError, set
         );
     });
 };
-// Delete button
+
+
+/**
+ * =========================================================
+ * Profile Utilities
+ * =========================================================
+ */
+
+
+/**
+ * Shows a confirmation dialog before deleting a user profile.
+ *
+ * If confirmed the profile deletion API call is triggered.
+ *
+ * @param {Function} setGlobalLoading
+ * @param {Function} setGlobalError
+ * @param {object} navigation
+ */
 export const confirmDelete = (setGlobalLoading, setGlobalError, navigation) => {
+
     Alert.alert(
         "Delete Profile",
         "Are you sure you want to delete your profile?",
         [
-            {
-                text: "No",
-                style: "cancel",
-            },
+            { text: "No", style: "cancel" },
             {
                 text: "Yes",
                 onPress: () =>
@@ -468,6 +356,40 @@ export const confirmDelete = (setGlobalLoading, setGlobalError, navigation) => {
     );
 };
 
+
+/**
+ * =========================================================
+ * UI Components
+ * =========================================================
+ */
+
+
+/**
+ * RatingStars Component
+ *
+ * Displays a star-based rating UI.
+ *
+ * Features:
+ * - Shows up to 5 stars
+ * - Supports half-star display
+ * - Can be read-only
+ * - Submits rating to backend
+ * - Updates overall rating if returned
+ *
+ * Props:
+ * @param rating
+ * @param onChange
+ * @param setId
+ * @param setGlobalLoading
+ * @param setGlobalError
+ * @param readonly
+ * @param size
+ * @param showLabel
+ * @param style
+ * @param setOverallRating
+ *
+ * @returns {JSX.Element}
+ */
 export default function RatingStars({
                                         rating,
                                         onChange,
@@ -478,12 +400,24 @@ export default function RatingStars({
                                         size = 25,
                                         showLabel = true,
                                         style,
-                                        setOverallRating, // optional callback to update overall rating
+                                        setOverallRating,
                                     }) {
+
+    /**
+     * Submits a rating for the current set.
+     *
+     * Updates:
+     * - Personal rating
+     * - Overall rating if returned from backend
+     *
+     * @param {number} value
+     */
     const rateSet = async (value) => {
+
         if (readonly) return;
 
         try {
+
             const updatedOverall = await handleSubmitSetRating(
                 setId,
                 value,
@@ -491,10 +425,10 @@ export default function RatingStars({
                 setGlobalLoading
             );
 
-            onChange?.(value); // update personal rating
+            onChange?.(value);
 
             if (updatedOverall !== null && typeof setOverallRating === 'function') {
-                setOverallRating(updatedOverall); // update general rating
+                setOverallRating(updatedOverall);
             }
 
         } catch (error) {
@@ -502,22 +436,25 @@ export default function RatingStars({
         }
     };
 
+
     return (
         <View style={[globalStyles.containerSlider, style]}>
+
             {!readonly && showLabel && (
                 <Text style={globalStyles.labelSlider}>Your Rating:</Text>
             )}
 
             <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
                 {[1, 2, 3, 4, 5].map((star) => {
+
                     let iconName;
 
                     if (rating >= star) {
-                        iconName = 'star'; // full star
+                        iconName = 'star';
                     } else if (rating >= star - 0.5) {
-                        iconName = 'star-half'; // half star
+                        iconName = 'star-half';
                     } else {
-                        iconName = 'star-outline'; // empty star
+                        iconName = 'star-outline';
                     }
 
                     return (
@@ -540,6 +477,3 @@ export default function RatingStars({
         </View>
     );
 }
-
-
-

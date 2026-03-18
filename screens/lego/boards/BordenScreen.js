@@ -1,9 +1,9 @@
 import {View, Text, Image, FlatList, TouchableOpacity, Button, Dimensions} from "react-native";
 import React, {useEffect, useState} from 'react';
-import {globalStyles} from "../styles";
-import { fetchModelLists} from "../components/Functions";
-import Config from "../config/config";
-import AddModal from "../components/AddModal";
+import {globalStyles} from "../../../styles";
+import { fetchModelLists} from "../../../components/Apicalls";
+import Config from "../../../config/config";
+import AddModal from "../../../components/modals/AddModal";
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 
 export default function BordenScreen({navigation, setGlobalError, setGlobalLoading}) {

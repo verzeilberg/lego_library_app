@@ -5,20 +5,20 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LoadingSpinner from './components/Elements';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Screens
-import LoginScreen from './screens/LoginScreen';
-import RegistrationScreen from './screens/RegistrationScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import LogoutScreen from './screens/LogoutScreen';
-import BordenScreen from './screens/BordenScreen';
-import BordScreen from './screens/BordScreen';
-import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
-import ResetPasswordScreen from './screens/ResetPasswordScreen';
-import ChangePasswordScreen from './screens/ChangePasswordScreen';
-import ActivationScreen from './screens/ActivationScreen';
-import SetDetailScreen from './screens/SetDetailScreen';
+import LoginScreen from './screens/auth/LoginScreen';
+import RegistrationScreen from './screens/auth/RegistrationScreen';
+import ProfileScreen from './screens/profile/ProfileScreen';
+import LogoutScreen from './screens/auth/LogoutScreen';
+import BordenScreen from './screens/lego/boards/BordenScreen';
+import BordScreen from './screens/lego/boards/BordScreen';
+import ForgotPasswordScreen from './screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from './screens/auth/ResetPasswordScreen';
+import ChangePasswordScreen from './screens/auth/ChangePasswordScreen';
+import ActivationScreen from './screens/activation/ActivationScreen';
+import SetDetailScreen from './screens/lego/set/SetDetailScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();

@@ -1,8 +1,8 @@
 import React, {useState, useRef} from 'react';
 import {View, TextInput, Text, Pressable} from 'react-native';
-import {globalStyles} from "../styles";
-import {handleChange, handleKeyPress} from "../components/Functions";
-import {handleForgotPasswordCodeSubmit} from "../components/Apicalls";
+import {globalStyles} from "../../styles";
+import {handleChange, handleKeyPress} from "../../utils/formUtils";
+import {handleForgotPasswordCodeSubmit} from "../../components/Apicalls";
 
 export default function FourDigitCodeInput({navigation, setGlobalError, setGlobalLoading}) {
     const [code, setCode] = useState(['', '', '', '']);

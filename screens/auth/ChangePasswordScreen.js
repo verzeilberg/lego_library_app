@@ -1,49 +1,17 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {View, TextInput, Button, Text, Pressable, TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { handleGeneratePassword, togglePasswordVisibility, checkPassword } from '../components/Functions';
-import {handleSubmitRegistration} from '../components/Apicalls'
-import LoadingSpinner from '../components/Elements';
-import { globalStyles } from '../styles';
+import {checkPassword, handleGeneratePassword, togglePasswordVisibility} from "../../utils/passwordUtils";
+import {handlePasswordSubmit} from "../../components/Apicalls";
+import {globalStyles} from "../../styles";
 
-export default function RegistrationScreen({navigation, setGlobalError, setGlobalLoading}) {
-    const [firstname, setFirstname] = useState('');
-    const [lastname, setLastname] = useState('');
-    const [email, setEmail] = useState('');
+export default function ChangePasswordScreen({route, navigation, setGlobalError, setGlobalLoading}) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);
 
-    useEffect(() => {
-        setGlobalLoading(false);
-    }, []);
-
     return (
         <View style={globalStyles.container}>
-            <TextInput
-                style={globalStyles.input}
-                placeholder="Firstname"
-                onChangeText={text => setFirstname(text)}
-                value={firstname}
-            />
-            <TextInput
-                style={globalStyles.input}
-                placeholder="Lastname"
-                onChangeText={text => setLastname(text)}
-                value={lastname}
-            />
-            <TextInput
-                style={globalStyles.input}
-                placeholder="Email"
-                type="email"
-                onChangeText={text => setEmail(text)}
-                value={email}
-                autoComplete="email"
-                textContentType="emailAddress"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-            />
             <View style={[globalStyles.input, globalStyles.inputContainer]}>
                 <TextInput
                     style={globalStyles.inputPassword}
@@ -52,7 +20,7 @@ export default function RegistrationScreen({navigation, setGlobalError, setGloba
                     value={password}
                     onChangeText={setPassword}
                 />
-                <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)} style={globalStyles.icon}>
+                <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}style={globalStyles.icon}>
                     <Icon name={isSecure ? 'eye-slash' : 'eye'} size={20} color="#000"/>
                 </TouchableOpacity>
             </View>
@@ -67,27 +35,25 @@ export default function RegistrationScreen({navigation, setGlobalError, setGloba
                 <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}style={globalStyles.icon}>
                     <Icon name={isSecure ? 'eye-slash' : 'eye'} size={20} color="#000"/>
                 </TouchableOpacity>
-
             </View>
 
             {/* Button to trigger password generation */}
             <View style={globalStyles.buttonContainer}>
                 <Button title="Generate Password" onPress={() => handleGeneratePassword(setPassword)}/>
             </View>
+
             <Pressable
                 style={globalStyles.button}
                 onPress={() => {
                     const doPasswordMatch = checkPassword(password, confirmPassword, setGlobalError);
                     if (doPasswordMatch) {
                         setGlobalLoading(true);
-                        handleSubmitRegistration(firstname, lastname, email, password, setGlobalError, setGlobalLoading, navigation);
+                        handlePasswordSubmit(password, navigation, setGlobalError, setGlobalLoading)
                     }
-
-            }}
+                }}
             >
-                <Text style={globalStyles.text}>Register</Text>
+                <Text style={globalStyles.text}>Save</Text>
             </Pressable>
         </View>
     );
 };
-

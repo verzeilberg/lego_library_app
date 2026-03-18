@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { logout } from '../components/Apicalls';
+import { logout } from '../../components/Apicalls';
 
 export default function LogoutScreen({ navigation, setGlobalError, setGlobalLoading }) {
 
