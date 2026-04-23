@@ -30,12 +30,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
         "projectId": "9b233da7-d95f-446e-a1fc-211fe39935bb"
       }
-    }
+    },
+    "owner": "vicestar"
   }
 }

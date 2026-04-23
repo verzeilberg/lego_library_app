@@ -48,7 +48,7 @@ export const globalStyles = StyleSheet.create({
         borderRadius: 5,
         marginTop: 10,
         marginRight: 3,
-        MarginLeft: 3,
+        marginLeft: 3,
         marginBottom: 10,
         paddingHorizontal: 20,
         backgroundColor: 'rgba(149, 165, 166, 0.2)',
@@ -228,21 +228,6 @@ export const globalStyles = StyleSheet.create({
         justifyContent: 'center',
         zIndex: 100,
         elevation: 50,
-        menuItem: {
-            borderTopColor: '##808080',
-            borderRadius: 5,
-            borderTopWidth: 1,
-            padding: 10,
-        },
-        menuText: {
-            fontSize: 18,
-            color: '#fff',
-            fontWeight: 'bold',
-        },
-
-        icon: {
-            paddingRight: 40,
-        }
     },
     listContainer: {
         padding: 16,
@@ -358,6 +343,37 @@ export const globalStyles = StyleSheet.create({
         marginBottom: 10,
         paddingHorizontal: 10,
     },
+    pickerContainer: {
+        width: '100%',
+        marginTop: 10,
+        marginBottom: 10,
+    },
+    pickerLabel: {
+        position: 'absolute',
+        top: -10,
+        left: 10,
+        fontSize: 16,
+        fontWeight: 'bold',
+        backgroundColor: '#f8f8f8',
+        paddingHorizontal: 5,
+        zIndex: 99,
+    },
+    pickerWrapper: {
+        width: '100%',
+        height: 45,
+        borderColor: 'gray',
+        borderWidth: 1,
+        borderRadius: 5,
+        justifyContent: 'center',
+    },
+    picker: {
+        width: '100%',
+        fontSize: 10,
+        color: '#000',
+    },
+    pickerItem: {
+        fontSize: 14,
+    },
     floatLabelInput: {
         width: '100%',
         height: 45,
@@ -367,6 +383,7 @@ export const globalStyles = StyleSheet.create({
         marginTop: 10,
         marginBottom: 10,
         paddingHorizontal: 13,
+        fontSize: 14,
     },
     counter: {
         position: 'absolute',
@@ -375,6 +392,14 @@ export const globalStyles = StyleSheet.create({
         fontSize: 14,
         color: 'gray',
         backgroundColor: 'transparent',
+    },
+    profileImageEditText: {
+        color: 'red',
+        fontWeight: 'bold',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 4,
+        marginBottom: 8,
     },
     imagePlaceholder: {
         position: 'absolute',
@@ -385,7 +410,104 @@ export const globalStyles = StyleSheet.create({
         bottom: 20,
         right: 0,
     },
+    // Generic
+    flex1: {
+        flex: 1,
+    },
+    bold: {
+        fontWeight: 'bold',
+    },
+
     // SetDetailScreen
+    setDetailLoadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    setDetailSlideContainer: {
+        padding: 16,
+        paddingBottom: 40,
+    },
+    setDetailSlideTitle: {
+        fontSize: 18,
+    },
+    setDetailSlideIntro: {
+        fontSize: 14,
+        marginBottom: 10,
+    },
+    setDetailRatingLabel: {
+        fontWeight: 'bold',
+        marginRight: 8,
+    },
+    setDetailQuantityText: {
+        marginTop: 4,
+    },
+    textMissing: {
+        color: 'red',
+    },
+    textBroken: {
+        color: 'orange',
+    },
+    textDiscoloured: {
+        color: '#b8860b',
+    },
+    setDetailStatusIcon: {
+        marginLeft: 4,
+    },
+    setDetailToolbar: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    setDetailDropdownBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1.5,
+        gap: 4,
+    },
+    setDetailDropdownBtnText: {
+        fontSize: 13,
+    },
+    setDetailDropdownModalContent: {
+        paddingVertical: 8,
+    },
+    setDetailDropdownModalTitle: {
+        marginBottom: 8,
+    },
+    setDetailSortOption: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+    },
+    setDetailSortOptionActive: {
+        backgroundColor: '#eee',
+    },
+    setDetailSortOptionText: {
+        fontSize: 15,
+    },
+    setDetailSortOptionTextBold: {
+        fontSize: 15,
+        fontWeight: 'bold',
+    },
+    setDetailFilterOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        gap: 10,
+    },
+    setDetailCounterLabel: {
+        width: 120,
+    },
+    arrowLeft: {
+        left: 10,
+    },
+    arrowRight: {
+        right: 10,
+    },
     ratingRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -435,6 +557,14 @@ export const globalStyles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 12,
+    },
+    imageDeleteIcon: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: 16,
+        padding: 4,
     },
     arrow: {
         position: 'absolute',
@@ -501,6 +631,112 @@ export const globalStyles = StyleSheet.create({
         fontSize: 36,
         fontWeight: "600",
         lineHeight: 36,
+    },
+
+    // Set detail image preview
+    setDetailPreviewLoader: {marginTop: 16},
+    setDetailPreviewPartNumber: {textAlign: 'center', marginTop: 8, fontSize: 18, fontWeight: 'bold', color: '#333'},
+    setDetailPreviewNavRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8},
+    setDetailPreviewNavCounter: {color: '#555', fontSize: 13},
+    setDetailPreviewImage: {marginTop: 16, alignSelf: 'center'},
+    setDetailRatingNoMargin: {margin: 0, padding: 0},
+    setDetailDropdownBtnSort: {borderColor: '#555'},
+    setDetailDropdownBtnSortText: {color: '#555'},
+
+    // HomeScreen
+    homeScreenContainer: {
+        flex: 1,
+    },
+    homeToggleBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginVertical: 10,
+        paddingHorizontal: 16,
+    },
+    homeToggleRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    homeToggleListButton: {
+        marginRight: 10,
+    },
+    homeSearchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginBottom: 10,
+    },
+    homeSearchInput: {
+        flex: 1,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        fontSize: 16,
+        backgroundColor: '#fff',
+        marginRight: 8,
+    },
+    homeSearchButton: {
+        backgroundColor: '#007bff',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    homeActivityIndicator: {
+        margin: 16,
+    },
+    homeCardGrid: {
+        flex: 1,
+        margin: 8,
+    },
+    homeCardTitleText: {
+        marginLeft: 0,
+    },
+    homeCardDescText: {
+        marginLeft: 0,
+    },
+    homeScrollTopButton: {
+        position: 'absolute',
+        right: 24,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#007bff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+    },
+
+    // HomeScreen card owner
+    homeCardBody: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: 8,
+        paddingBottom: 10,
+        paddingTop: 4,
+    },
+    homeCardText: {
+        flex: 1,
+    },
+    homeOwnerButton: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 8,
+        marginTop: 14,
+    },
+    homeOwnerAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#e1e1e1',
     },
 
     //Rating slider

@@ -28,7 +28,7 @@ export const openCameraWithoutUpload = async () => {
 
     if (!permissionResult.granted) {
         alert('Camera permission is required!');
-        return { cancelled: true };
+        return { canceled: true };
     }
 
     return ImagePicker.launchCameraAsync({
@@ -58,7 +58,7 @@ export const openImageLibraryWithoutUpload = async (
     }
 
     return ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: 'images',
         allowsEditing,
         allowsMultipleSelection: allowMultiple,
         selectionLimit,
@@ -82,6 +82,32 @@ export const selectImage = () => {
                         resolve(await openCameraWithoutUpload()) },
                 { text: "Bibliotheek", onPress: async () =>
                         resolve(await openImageLibraryWithoutUpload(true,0,false)) },
+                { text: "Annuleer", style: "cancel",
+                    onPress: () => resolve({ cancelled: true }) },
+            ]
+        );
+
+    });
+};
+
+
+/**
+ * Image selection dialog with delete option.
+ */
+export const selectImageWithDelete = (onDelete) => {
+
+    return new Promise((resolve) => {
+
+        Alert.alert(
+            "Kies een optie",
+            "Wil je een foto nemen of kiezen uit de bibliotheek?",
+            [
+                { text: "Camera", onPress: async () =>
+                        resolve(await openCameraWithoutUpload()) },
+                { text: "Bibliotheek", onPress: async () =>
+                        resolve(await openImageLibraryWithoutUpload(true,0,false)) },
+                { text: "Verwijder", style: "destructive",
+                    onPress: () => { onDelete(); resolve({ cancelled: true }); } },
                 { text: "Annuleer", style: "cancel",
                     onPress: () => resolve({ cancelled: true }) },
             ]

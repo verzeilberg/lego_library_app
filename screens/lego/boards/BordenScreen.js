@@ -1,5 +1,6 @@
-import {View, Text, Image, FlatList, TouchableOpacity, Button, Dimensions} from "react-native";
-import React, {useEffect, useState} from 'react';
+import {View, Text, Image, FlatList, TouchableOpacity, Dimensions} from "react-native";
+import React, {useState, useCallback} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
 import {globalStyles} from "../../../styles";
 import { fetchModelLists} from "../../../components/Apicalls";
 import Config from "../../../config/config";
@@ -22,15 +23,18 @@ export default function BordenScreen({navigation, setGlobalError, setGlobalLoadi
 
     const reloadData = () => {
         setGlobalLoading(true);
-        fetchModelLists(setData, setGlobalError, setGlobalLoading);
+        fetchModelLists((result) => {
+            setData(Array.isArray(result)
+                ? [...new Map(result.map(item => [item.id, item])).values()]
+                : result);
+        }, setGlobalError, setGlobalLoading);
     };
 
-    /** Check token when the page is loaded **/
-    useEffect(() => {
+    useFocusEffect(useCallback(() => {
         reloadData();
-    }, []);
+    }, []));
 
-    const renderItem = ({ item }) => (
+const renderItem = ({ item }) => (
         <TouchableOpacity
             style={[
                 globalStyles.card,
@@ -62,18 +66,11 @@ export default function BordenScreen({navigation, setGlobalError, setGlobalLoadi
 
 
     return (
-        <View style={{ flex: 1 }}>
+        <View style={globalStyles.flex1}>
             {/* Toggle Buttons */}
-            <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginVertical: 10,
-                paddingHorizontal: 16
-            }}>
-                {/* Left: Grid/List toggle */}
-                <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={() => setViewType('list')} style={{ marginRight: 10 }}>
+            <View style={globalStyles.homeToggleBar}>
+                <View style={globalStyles.homeToggleRight}>
+                    <TouchableOpacity onPress={() => setViewType('list')} style={globalStyles.homeToggleListButton}>
                         <FontAwesome
                             name="list"
                             size={24}
@@ -88,15 +85,7 @@ export default function BordenScreen({navigation, setGlobalError, setGlobalLoadi
                         />
                     </TouchableOpacity>
                 </View>
-
-                {/* Right: Add new list item */}
-                <TouchableOpacity
-                    onPress={() => {
-                        // Open modal
-                        setModalVisible(true);
-                    }}
-                    style={{ padding: 6 }}
-                >
+                <TouchableOpacity onPress={() => setModalVisible(true)} style={{padding: 6}}>
                     <MaterialIcons name="playlist-add" size={28} color="green" />
                 </TouchableOpacity>
             </View>

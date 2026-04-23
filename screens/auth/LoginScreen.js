@@ -1,33 +1,31 @@
-import {TextInput, View, Text, Pressable, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Linking} from "react-native";
-import React, {useEffect, useState} from 'react';
+import {TextInput, View, Text, Pressable, TouchableOpacity, Image, KeyboardAvoidingView, ScrollView, Platform, Linking} from "react-native";
+import React, {useState} from 'react';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {globalStyles} from '../../styles';
-import {checkToken} from '../../utils/authUtils';
 import {togglePasswordVisibility} from '../../utils/passwordUtils';
-import {handleSubmitLogin} from '../../components/Apicalls'
+import {handleSubmitLogin} from '../../components/Apicalls';
+import {registerForPushNotifications} from '../../utils/notificationUtils';
 import Config from "../../config/config";
 
 export default function LoginScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);
+
     const openApi = () => {
         Linking.openURL(Config.API_BASE_URL);
     };
 
-    /** Check token when the page is loaded **/
-    useEffect(() => {
-        setGlobalLoading(true);
-        checkToken(navigation, setGlobalError, setGlobalLoading);
-    }, []);
-
     return (
         <KeyboardAvoidingView
             style={globalStyles.containerKeyboard}
-            behavior={Platform.OS === "ios" ? "padding" : "height"} // "padding" is best for iOS
-            keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0} // adjust for headers/navbars
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
         >
-            <View style={globalStyles.container}>
+            <ScrollView
+                contentContainerStyle={[globalStyles.container, { paddingTop: 80, paddingBottom: 40 }]}
+                keyboardShouldPersistTaps="handled"
+            >
                 <Image
                     style={globalStyles.stretch}
                     source={require('../../assets/images/lego_logo.png')}
@@ -63,7 +61,10 @@ export default function LoginScreen({navigation, setGlobalError, setGlobalLoadin
 
                 <Pressable
                     style={globalStyles.button}
-                    onPress={() => handleSubmitLogin(email, password, navigation, setGlobalError)}
+                    onPress={async () => {
+                        await handleSubmitLogin(email, password, navigation, setGlobalError);
+                        registerForPushNotifications();
+                    }}
                 >
                     <Text style={globalStyles.text}>Login</Text>
                 </Pressable>
@@ -90,7 +91,7 @@ export default function LoginScreen({navigation, setGlobalError, setGlobalLoadin
                     </Text>
                 </Pressable>
                 <Text>Version {Config.VERSION}</Text>
-            </View>
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 };

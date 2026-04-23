@@ -18,16 +18,11 @@ export default function FloatingLabelInput({ placeholder, value, onChangeText, m
     const labelStyle = {
         position: 'absolute',
         left: 10,
+        top:-2,
         paddingHorizontal: 5,
         zIndex: 99,
-        top: animated.interpolate({
-            inputRange: [0, 1],
-            outputRange: multiline ? [-1, 3] : [18, 0], // adjust for multiline
-        }),
-        fontSize: animated.interpolate({
-            inputRange: [0, 1],
-            outputRange: multiline ? [16, 12] : [20, 16], // shrink label
-        }),
+
+        fontSize: 14,
         fontWeight: 'bold',
         backgroundColor: '#f8f8f8',
     };

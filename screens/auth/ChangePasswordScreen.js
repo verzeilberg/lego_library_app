@@ -5,7 +5,7 @@ import {checkPassword, handleGeneratePassword, togglePasswordVisibility} from ".
 import {handlePasswordSubmit} from "../../components/Apicalls";
 import {globalStyles} from "../../styles";
 
-export default function ChangePasswordScreen({route, navigation, setGlobalError, setGlobalLoading}) {
+export default function ChangePasswordScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSecure, setIsSecure] = useState(true);

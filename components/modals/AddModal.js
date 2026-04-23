@@ -10,6 +10,7 @@ export default function AddModal({
                                      modalVisible,
                                      setModalVisible,
                                      onDataUpdated,
+                                     onBordUpdated = null,
                                      setGlobalError,
                                      setGlobalLoading,
                                      mode = 'add',
@@ -26,12 +27,13 @@ export default function AddModal({
     const [addLegoImages, setAddLegoImages] = useState(false);
 
     const [selectedImage, setSelectedImage] = useState(null);
+    const [imageChanged, setImageChanged] = useState(false);
     const [errorMessage, setErrorMessage] = useState(null);
 
-    const toggleSwitch = () => setIsPublicPrivate(prev => !prev);
-    const toggleSwitch2 = () => setAddLegoParts(prev => !prev);
-    const toggleSwitch3 = () => setAddLegoImages(prev => !prev);
-    const toggleSwitch4 = () => setAddLegoMinifigs(prev => !prev);
+    const togglePublicPrivate = () => setIsPublicPrivate(prev => !prev);
+    const toggleParts = () => setAddLegoParts(prev => !prev);
+    const toggleImages = () => setAddLegoImages(prev => !prev);
+    const toggleMinifigs = () => setAddLegoMinifigs(prev => !prev);
 
     // Reset or prefill fields whenever modal opens
     useEffect(() => {
@@ -44,6 +46,7 @@ export default function AddModal({
             setDescription(data.description || '');
             setIsPublicPrivate(data.isPublic || false);
             setSelectedImage(data.filePath ? Config.API_BASE_URL + data.filePath : null);
+            setImageChanged(false);
 
             setLegoNmbr('');
             setAddLegoParts(false);
@@ -80,6 +83,7 @@ export default function AddModal({
         const result = await selectImage();
         if (!result.canceled) {
             setSelectedImage(result.assets[0].uri);
+            setImageChanged(true);
         }
     };
 
@@ -100,7 +104,10 @@ export default function AddModal({
                 setGlobalLoading(false);
                 return;
             }
-            handleSubmitAddEditBoard(data.id, title, description, isPublicPrivate, selectedImage, setGlobalError, setGlobalLoading, setModalVisible, onDataUpdated, mode);
+            handleSubmitAddEditBoard(data.id, title, description, isPublicPrivate, imageChanged ? selectedImage : null, setGlobalError, setGlobalLoading, setModalVisible, () => {
+                onDataUpdated();
+                if (onBordUpdated) onBordUpdated({ title, description, isPublic: isPublicPrivate });
+            }, mode);
         }
     };
 
@@ -166,7 +173,7 @@ export default function AddModal({
                                         <Switch
                                             trackColor={{ false: '#767577', true: '#349A20FF' }}
                                             thumbColor={addLegoImages ? '#3dd51e' : '#f4f3f4'}
-                                            onValueChange={toggleSwitch3}
+                                            onValueChange={toggleImages}
                                             value={addLegoImages}
                                         />
                                     </View>
@@ -180,7 +187,7 @@ export default function AddModal({
                                         <Switch
                                             trackColor={{ false: '#767577', true: '#349A20FF' }}
                                             thumbColor={addLegoParts ? '#3dd51e' : '#f4f3f4'}
-                                            onValueChange={toggleSwitch2}
+                                            onValueChange={toggleParts}
                                             value={addLegoParts}
                                         />
                                     </View>
@@ -194,7 +201,7 @@ export default function AddModal({
                                         <Switch
                                             trackColor={{ false: '#767577', true: '#349A20FF' }}
                                             thumbColor={addLegoMinifigs ? '#3dd51e' : '#f4f3f4'}
-                                            onValueChange={toggleSwitch4}
+                                            onValueChange={toggleMinifigs}
                                             value={addLegoMinifigs}
                                         />
                                     </View>
@@ -253,7 +260,7 @@ export default function AddModal({
                                 <Switch
                                     trackColor={{ false: '#767577', true: '#81b0ff' }}
                                     thumbColor={isPublicPrivate ? '#007BFF' : '#f4f3f4'}
-                                    onValueChange={toggleSwitch}
+                                    onValueChange={togglePublicPrivate}
                                     value={isPublicPrivate}
                                 />
                             </View>

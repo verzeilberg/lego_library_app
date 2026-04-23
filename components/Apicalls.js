@@ -23,6 +23,18 @@ const apiFetch = async (path, options = {}) => {
     });
 };
 
+export const savePushToken = async (pushToken) => {
+    try {
+        await apiFetch('/api/push-token', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pushToken}),
+        });
+    } catch (_) {
+        // Best-effort — don't block the user if this fails
+    }
+};
+
 /**
  * Handles the submission of login credentials by making a POST request to the login API.
  * On success, stores the token in local storage and navigates to the MainTabs screen.
@@ -388,6 +400,7 @@ export const handleSubmitDeleteSetFromSetList = async (setId, bordId, setGlobalE
  * @param {string} firstName
  * @param {string} lastName
  * @param {string} bio
+ * @param geslacht
  * @param {string|null} selectedImage
  * @param {function} setGlobalError
  * @param {function} setData
@@ -400,6 +413,7 @@ export const handleSubmitEditProfile = async (
     firstName,
     lastName,
     bio,
+    geslacht,
     selectedImage,
     setGlobalError,
     setData,
@@ -407,13 +421,17 @@ export const handleSubmitEditProfile = async (
     setGlobalLoading,
     navigation
 ) => {
+
     const formData = new FormData();
     formData.append('userName', userName || '');
     formData.append('firstName', firstName || '');
     formData.append('lastName', lastName || '');
     formData.append('bio', bio || '');
-    if (selectedImage && typeof selectedImage === 'string') {
+    formData.append('geslacht', geslacht || '');
+    if (selectedImage && typeof selectedImage === 'string' && !selectedImage.startsWith('http')) {
         formData.append('file', imageFromUri(selectedImage));
+    } else if (!selectedImage) {
+        formData.append('deleteImage', '1');
     }
 
     try {
@@ -422,9 +440,13 @@ export const handleSubmitEditProfile = async (
             body: formData,
         });
 
-        const result = await response.json();
+        let result = {};
+        try {
+            result = await response.json();
+        } catch (_) {}
+
         if (!response.ok) {
-            setGlobalError('Edit profile unsuccessful: ' + result.message);
+            setGlobalError('Edit profile unsuccessful: ' + (result.message || result.error || result.detail || 'Unknown error'));
         } else {
             setData(result);
             setIsEditing(false);
@@ -472,10 +494,11 @@ export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError
  * @param {function} setBord
  * @param {function} setGlobalError
  */
-export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError) => {
+export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError, query = '') => {
     try {
         setGlobalLoading(true);
-        const response = await apiFetch(`/api/set-lists/${id}`, {
+        const q = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : '';
+        const response = await apiFetch(`/api/set-lists/${id}${q}`, {
             headers: {'Content-Type': 'application/json'},
         });
 
@@ -648,11 +671,13 @@ export const savePartState = async (selectedPart, setSavingPart, setSet, setModa
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                userSet: `/api/lego/user-sets/${selectedPart.userSetId}`,
-                setPart: `/api/lego/set-parts/${selectedPart.setPartId}`,
                 missingQuantity: selectedPart.missingQuantity ?? 0,
                 damagedQuantity: selectedPart.damagedQuantity ?? 0,
                 discolouredQuantity: selectedPart.discolouredQuantity ?? 0,
+                colorId: selectedPart.colorId,
+                partId: selectedPart.partNumber,
+                setNumber: selectedPart.setNumber,
+                bordId: selectedPart.bordId,
             }),
         });
 
@@ -665,8 +690,13 @@ export const savePartState = async (selectedPart, setSavingPart, setSet, setModa
         setSet(prev => ({
             ...prev,
             setParts: prev.setParts.map(p =>
-                p.userSetPartId.toString() === selectedPart.userSetPartId.toString()
-                    ? {...p, ...data}
+                p.setPartId === selectedPart.setPartId
+                    ? {
+                        ...p,
+                        missingQuantity: selectedPart.missingQuantity ?? 0,
+                        damagedQuantity: selectedPart.damagedQuantity ?? 0,
+                        discolouredQuantity: selectedPart.discolouredQuantity ?? 0,
+                    }
                     : p
             ),
         }));
@@ -677,6 +707,25 @@ export const savePartState = async (selectedPart, setSavingPart, setSet, setModa
         setGlobalError("Failed to save part state.");
     } finally {
         setSavingPart(false);
+    }
+};
+
+export const deleteSetImage = async (mediaId, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/set-images/delete/${mediaId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok && response.status !== 204) {
+            const data = await response.json();
+            setGlobalError(data.error || 'Failed to delete image');
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        setGlobalError(error.message || 'Failed to delete image');
+        return false;
     }
 };
 
@@ -704,7 +753,6 @@ export const uploadImagesToSet = async (images, setNumber, listId, setGlobalErro
     try {
         const response = await apiFetch(`/api/lego/set-lists/${listId}/sets/${setNumber}/add-images`, {
             method: "POST",
-            headers: {"Content-Type": "multipart/form-data"},
             body: formData,
         });
 
@@ -754,9 +802,96 @@ export const fetchData = async (setData, setGlobalError, setGlobalLoading) => {
  * @param {function} setGlobalError
  * @param {function} setGlobalLoading
  */
+export const fetchSetListById = async (id, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/set-list/${id}`);
+        if (!response.ok) return null;
+        return await response.json();
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+        return null;
+    }
+};
+
 export const fetchModelLists = async (setData, setGlobalError, setGlobalLoading) => {
     try {
-        const response = await apiFetch('/api/set-lists', {
+        const response = await apiFetch('/api/set-lists-for-user', {
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Fetches a public user profile by user ID.
+ *
+ * @param {string|number} userId
+ * @param {function} setData
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ */
+export const fetchPublicUserData = async (userId, setData, setGlobalError, setGlobalLoading) => {
+    try {
+        const response = await apiFetch(`/api/public/user/${userId}`, {
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            setGlobalError(`HTTP error! Status: ${response.status}`);
+            return;
+        }
+
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Fetches the 10 latest public boards for a given user.
+ *
+ * @param {string|number} userId
+ * @param {function} setData
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ */
+export const fetchPublicUserBords = async (userId, setData, setGlobalError, setGlobalLoading, page = 1, limit = 10) => {
+    try {
+        const response = await apiFetch(`/api/public/user/${userId}/bords?page=${page}&limit=${limit}`, {
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            setGlobalError(`HTTP error! Status: ${response.status}`);
+            return;
+        }
+
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+export const fetchPublicSetLists = async (setData, setGlobalError, setGlobalLoading, page = 1, limit = 10, query = '') => {
+    try {
+        const trimmedQuery = query.trim();
+        const endpoint = trimmedQuery
+            ? `/api/set-lists-public-search?page=${page}&limit=${limit}&q=${encodeURIComponent(trimmedQuery)}`
+            : `/api/set-lists-public?page=${page}&limit=${limit}`;
+        const response = await apiFetch(endpoint, {
             headers: {'Content-Type': 'application/json'},
         });
 

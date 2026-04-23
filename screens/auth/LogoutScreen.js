@@ -9,7 +9,6 @@ export default function LogoutScreen({ navigation, setGlobalError, setGlobalLoad
                 setGlobalLoading(true);
                 await logout(false, navigation, setGlobalError, setGlobalLoading);
             } catch (error) {
-                setGlobalLoading(false);
                 setGlobalError(error);
             } finally {
                 setGlobalLoading(false);

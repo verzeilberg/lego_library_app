@@ -1,10 +1,10 @@
 import { View, Text, Image, FlatList, TouchableOpacity, Dimensions } from 'react-native';
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { globalStyles } from '../../../styles';
 import Config from '../../../config/config';
 import AddModal from '../../../components/modals/AddModal';
-import { handleSubmitDeleteBord, reloadData as reloadBordData } from "../../../components/Apicalls";
+import { handleSubmitDeleteBord, reloadData as reloadBordData, fetchSetListById } from "../../../components/Apicalls";
 import {useFocusEffect} from "@react-navigation/native";
 
 export default function BordScreen({ route, navigation, setGlobalError, setGlobalLoading }) {
@@ -16,6 +16,7 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
     const [modalMode, setModalMode] = useState('add'); // 'add', 'addItem', 'edit'
     const [modalData, setModalData] = useState(null);
     const [items, setItems] = useState([]); // Items inside the bord
+    const [isLoading, setIsLoading] = useState(true);
 
     const screenWidth = Dimensions.get('window').width;
     const cardMargin = 16;
@@ -32,8 +33,8 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
     );
 
     const reloadItems = () => {
-        setGlobalLoading(true);
-        reloadBordData(bord.id, setGlobalLoading, setItems, setGlobalError);
+        setIsLoading(true);
+        reloadBordData(bord.id, setGlobalLoading, (data) => { setItems(data); setIsLoading(false); }, setGlobalError);
     };
 
     const handleAddBord = () => {
@@ -135,11 +136,11 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
                 numColumns={numColumns}
                 contentContainerStyle={globalStyles.listContainer}
                 renderItem={renderItem}
-                ListEmptyComponent={() => (
+                ListEmptyComponent={() => !isLoading ? (
                     <View>
                         <Text style={globalStyles.titleText}>No sets/list available</Text>
                     </View>
-                )}
+                ) : null}
             />
 
             {/* Modal */}
@@ -147,6 +148,10 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}
                 onDataUpdated={reloadItems}
+                onBordUpdated={async () => {
+                    const updated = await fetchSetListById(bord.id, setGlobalError);
+                    if (updated) setBord(updated);
+                }}
                 setGlobalError={setGlobalError}
                 setGlobalLoading={setGlobalLoading}
                 mode={modalMode}
