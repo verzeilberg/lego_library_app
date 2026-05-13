@@ -9,7 +9,7 @@ import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 
 export default function BordenScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [data, setData] = useState(null); // To store the fetched data
-    const [viewType, setViewType] = useState('list'); // 'list' or 'grid'
+    const [viewType, setViewType] = useState('card'); // 'card', 'list' or 'grid'
     const [modalVisible, setModalVisible] = useState(false);
 
     //Card dimension
@@ -18,8 +18,7 @@ export default function BordenScreen({navigation, setGlobalError, setGlobalLoadi
     const gridSpacing = 8;  // space between grid cards
     const numColumns = viewType === 'grid' ? 2 : 1;
     const cardWidth = (screenWidth - cardMargin * 2 - gridSpacing * (numColumns - 1)) / numColumns;
-    //Card text dimension
-    const scaleText = (baseSize) => Math.max(12, Math.min(baseSize, cardWidth / 10));
+    const scaleText = useCallback((baseSize) => Math.max(12, Math.min(baseSize, cardWidth / 10)), [cardWidth]);
 
     const reloadData = () => {
         setGlobalLoading(true);
@@ -34,33 +33,45 @@ export default function BordenScreen({navigation, setGlobalError, setGlobalLoadi
         reloadData();
     }, []));
 
-const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={[
-                globalStyles.card,
-                viewType === 'grid' && { flex: 1, margin: gridSpacing }
-            ]}
-            onPress={() => navigation.navigate('Bord', { item })}
-            activeOpacity={0.8}
-        >
-            <Image
-                source={{ uri: Config.API_BASE_URL + item.filePath }}
-                style={globalStyles.modelListImage}
-            />
-            <Text style={[
-                globalStyles.titleText,
-                { fontSize: scaleText(16) } // dynamically scaled
-            ]}>
-                {item.title}
-            </Text>
-            <Text style={[
-                globalStyles.descriptionText,
-                { fontSize: scaleText(14) } // dynamically scaled
-            ]}>
-                {item.description}
-            </Text>
-        </TouchableOpacity>
-    );
+    const renderItem = useCallback(({ item }) => {
+        if (viewType === 'list') {
+            return (
+                <TouchableOpacity
+                    style={globalStyles.homeListCard}
+                    onPress={() => navigation.navigate('Bord', {item})}
+                    activeOpacity={0.8}
+                >
+                    <Image
+                        source={{uri: Config.API_BASE_URL + item.filePath}}
+                        style={globalStyles.homeListThumb}
+                    />
+                    <View style={globalStyles.homeListInfo}>
+                        <Text style={globalStyles.homeListTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={globalStyles.homeListDesc} numberOfLines={2}>{item.description}</Text>
+                    </View>
+                </TouchableOpacity>
+            );
+        }
+
+        return (
+            <TouchableOpacity
+                style={[globalStyles.card, viewType === 'grid' && globalStyles.homeCardGrid]}
+                onPress={() => navigation.navigate('Bord', {item})}
+                activeOpacity={0.8}
+            >
+                <Image
+                    source={{uri: Config.API_BASE_URL + item.filePath}}
+                    style={globalStyles.modelListImage}
+                />
+                <Text style={[globalStyles.titleText, {fontSize: scaleText(16)}]}>
+                    {item.title}
+                </Text>
+                <Text style={[globalStyles.descriptionText, {fontSize: scaleText(14)}]}>
+                    {item.description}
+                </Text>
+            </TouchableOpacity>
+        );
+    }, [viewType, navigation, scaleText]);
 
 
 
@@ -70,17 +81,24 @@ const renderItem = ({ item }) => (
             {/* Toggle Buttons */}
             <View style={globalStyles.homeToggleBar}>
                 <View style={globalStyles.homeToggleRight}>
+                    <TouchableOpacity onPress={() => setViewType('card')} style={globalStyles.homeToggleListButton}>
+                        <FontAwesome
+                            name="square"
+                            size={22}
+                            color={viewType === 'card' ? 'blue' : 'gray'}
+                        />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => setViewType('list')} style={globalStyles.homeToggleListButton}>
                         <FontAwesome
                             name="list"
-                            size={24}
+                            size={22}
                             color={viewType === 'list' ? 'blue' : 'gray'}
                         />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setViewType('grid')}>
                         <FontAwesome
                             name="th-large"
-                            size={24}
+                            size={22}
                             color={viewType === 'grid' ? 'blue' : 'gray'}
                         />
                     </TouchableOpacity>

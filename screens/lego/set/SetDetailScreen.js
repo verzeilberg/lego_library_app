@@ -26,6 +26,7 @@ import RatingStars from "../../../components/rating/RatingStars";
 import {useFocusEffect} from "@react-navigation/native";
 import {MaterialIcons, FontAwesome} from '@expo/vector-icons';
 import {File, Paths} from 'expo-file-system/next';
+import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
 const {width} = Dimensions.get('window');
@@ -180,30 +181,116 @@ export default function SetDetailScreen({route, navigation, setGlobalError, setG
     );
 
     // ======================
-    // DEFECTIVE PARTS
+    // MISSING PARTS EXPORT
     // ======================
-    const exportDefectiveCsv = async () => {
+    const missingParts = React.useMemo(() =>
+        (set?.setParts || []).filter(p => (p.missingQuantity || 0) > 0),
+        [set?.setParts]
+    );
+
+    const exportMissingCsv = async () => {
         try {
+            if (missingParts.length === 0) {
+                Alert.alert('No missing parts', 'There are no missing parts to export.');
+                return;
+            }
             const isAvailable = await Sharing.isAvailableAsync();
             if (!isAvailable) {
                 Alert.alert('Sharing not available', 'This device does not support file sharing.');
                 return;
             }
-            const filteredParts = (set.setParts || []).filter(p =>
-                partsFilter.length === 0 || partsFilter.some(key => (p[key] || 0) > 0)
-            );
             const header = 'Part Number,Name,Color,Quantity,Missing,Broken,Discoloured';
-            const rows = filteredParts.map(p =>
-                [p.partNumber, `"${p.name}"`, p.colorId, p.quantity, p.missingQuantity || 0, p.damagedQuantity || 0, p.discolouredQuantity || 0].join(',')
+            const rows = missingParts.map(p =>
+                [
+                    p.partNumber || '',
+                    `"${(p.name || '').replace(/"/g, '""')}"`,
+                    `"${(p.colorName || '').replace(/"/g, '""')}"`,
+                    p.quantity || 0,
+                    p.missingQuantity || 0,
+                    p.damagedQuantity || 0,
+                    p.discolouredQuantity || 0,
+                ].join(',')
             );
             const csv = [header, ...rows].join('\n');
-            const file = new File(Paths.cache, `${set.number}-parts.csv`);
+            const file = new File(Paths.cache, `${set.number}-missing-parts.csv`);
             file.write(csv);
-            await Sharing.shareAsync(file.uri, {mimeType: 'text/csv', dialogTitle: 'Export parts'});
+            await Sharing.shareAsync(file.uri, {mimeType: 'text/csv', dialogTitle: 'Export missing parts'});
         } catch (err) {
             Alert.alert('Export failed', err.message);
         }
     };
+
+    const exportMissingExcel = async () => {
+        if (missingParts.length === 0) {
+            Alert.alert('No missing parts', 'There are no missing parts to export.');
+            return;
+        }
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (!isAvailable) {
+            Alert.alert('Sharing not available', 'This device does not support file sharing.');
+            return;
+        }
+        try {
+            setGlobalLoading(true);
+            const rowsHtml = await Promise.all(missingParts.map(async (p) => {
+                let imgHtml = '';
+                if (p.imageUrl) {
+                    const imageUrl = p.imageUrl.startsWith('http')
+                        ? p.imageUrl
+                        : `${Config.API_BASE_URL}${p.imageUrl}`;
+                    try {
+                        const localUri = `${FileSystem.cacheDirectory}part-${p.partNumber}.jpg`;
+                        await FileSystem.downloadAsync(imageUrl, localUri);
+                        const base64 = await FileSystem.readAsStringAsync(localUri, {encoding: FileSystem.EncodingType.Base64});
+                        imgHtml = `<img src="data:image/jpeg;base64,${base64}" width="60" height="60" />`;
+                    } catch (_) {}
+                }
+                const safe = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return `<tr>
+                    <td>${imgHtml}</td>
+                    <td>${p.partNumber || ''}</td>
+                    <td>${safe(p.name)}</td>
+                    <td>${safe(p.colorName)}</td>
+                    <td>${p.quantity || 0}</td>
+                    <td>${p.missingQuantity || 0}</td>
+                    <td>${p.damagedQuantity || 0}</td>
+                    <td>${p.discolouredQuantity || 0}</td>
+                </tr>`;
+            }));
+
+            const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><style>
+table{border-collapse:collapse}
+th{background:#1f65ff;color:#fff;padding:8px;border:1px solid #ccc;white-space:nowrap}
+td{padding:6px;border:1px solid #ccc;vertical-align:middle}
+</style></head>
+<body><table>
+<thead><tr>
+<th>Image</th><th>Part Nr.</th><th>Name</th><th>Color</th>
+<th>Quantity</th><th>Missing</th><th>Broken</th><th>Discoloured</th>
+</tr></thead>
+<tbody>${rowsHtml.join('')}</tbody>
+</table></body></html>`;
+
+            const file = new File(Paths.cache, `${set.number}-missing-parts.xls`);
+            file.write(html);
+            await Sharing.shareAsync(file.uri, {mimeType: 'application/vnd.ms-excel', dialogTitle: 'Export missing parts'});
+        } catch (err) {
+            Alert.alert('Export failed', err.message);
+        } finally {
+            setGlobalLoading(false);
+        }
+    };
+
+    const handleExport = () => Alert.alert(
+        'Export missing parts',
+        'Choose export format',
+        [
+            {text: 'CSV', onPress: exportMissingCsv},
+            {text: 'Excel (with images)', onPress: exportMissingExcel},
+            {text: 'Annuleer', style: 'cancel'},
+        ]
+    );
 
     // ======================
     // DYNAMIC SLIDES (memoized)
@@ -385,7 +472,7 @@ export default function SetDetailScreen({route, navigation, setGlobalError, setG
                 <Text style={globalStyles.headerTitle} numberOfLines={1}>{set.name}</Text>
                 <View style={globalStyles.headerIcons}>
                     {slides[currentSlide]?.id === 'parts' && (
-                        <TouchableOpacity onPress={exportDefectiveCsv}>
+                        <TouchableOpacity onPress={handleExport}>
                             <MaterialIcons name="download" size={28} color="black"/>
                         </TouchableOpacity>
                     )}

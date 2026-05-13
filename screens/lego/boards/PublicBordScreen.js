@@ -69,12 +69,12 @@ export default function PublicBordScreen({ route, navigation, setGlobalError, se
     );
 
     return (
-        <View style={{ flex: 1, padding: 16 }}>
+        <View style={globalStyles.screenPadding}>
             {/* Bord image */}
             {bord.filePath && (
                 <Image
                     source={{ uri: Config.API_BASE_URL + bord.filePath }}
-                    style={{ width: '100%', height: 200, borderRadius: 12 }}
+                    style={globalStyles.bordHeaderImage}
                     resizeMode="cover"
                 />
             )}
@@ -90,10 +90,10 @@ export default function PublicBordScreen({ route, navigation, setGlobalError, se
                 </TouchableOpacity>
                 <View style={globalStyles.homeToggleRight}>
                     <TouchableOpacity onPress={() => setViewType('list')} style={globalStyles.homeToggleListButton}>
-                        <FontAwesome name="list" size={24} color={viewType === 'list' ? 'blue' : 'gray'} />
+                        <FontAwesome name="list" size={22} color={viewType === 'list' ? 'blue' : 'gray'} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setViewType('grid')}>
-                        <FontAwesome name="th-large" size={24} color={viewType === 'grid' ? 'blue' : 'gray'} />
+                        <FontAwesome name="th-large" size={22} color={viewType === 'grid' ? 'blue' : 'gray'} />
                     </TouchableOpacity>
                 </View>
             </View>

@@ -26,7 +26,7 @@ const PAGE_SIZE = 10;
 
 export default function HomeScreen({navigation, setGlobalError, setGlobalLoading}) {
     const [data, setData] = useState([]);
-    const [viewType, setViewType] = useState('list'); // 'list' or 'grid'
+    const [viewType, setViewType] = useState('card'); // 'card', 'list' or 'grid'
     const [page, setPage] = useState(1);
     const [loadingMore, setLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
@@ -44,6 +44,7 @@ export default function HomeScreen({navigation, setGlobalError, setGlobalLoading
     const gridSpacing = 8;
     const numColumns = viewType === 'grid' ? 2 : 1;
     const cardWidth = (screenWidth - cardMargin * 2 - gridSpacing * (numColumns - 1)) / numColumns;
+
     const scaleText = (baseSize) => Math.max(12, Math.min(baseSize, cardWidth / 10));
 
     const loadPage = (pageToLoad, replace = false, query = '') => {
@@ -98,46 +99,80 @@ export default function HomeScreen({navigation, setGlobalError, setGlobalLoading
         loadPage(nextPage, false, '');
     };
 
-    const renderItem = ({ item }) => (
-        <TouchableOpacity
-            style={[
-                globalStyles.card,
-                viewType === 'grid' && globalStyles.homeCardGrid,
-            ]}
-            onPress={() => navigation.navigate('PublicBord', { item })}
-            activeOpacity={0.8}
-        >
-            <Image
-                source={{ uri: Config.API_BASE_URL + item.filePath }}
-                style={globalStyles.modelListImage}
-            />
-            <View style={globalStyles.homeCardBody}>
-                <View style={globalStyles.homeCardText}>
-                    <Text style={[globalStyles.titleText, globalStyles.homeCardTitleText, { fontSize: scaleText(16) }]}>
-                        {item.title}
-                    </Text>
-                    <Text style={[globalStyles.descriptionText, globalStyles.homeCardDescText, { fontSize: scaleText(14) }]}>
-                        {item.description}
-                    </Text>
-                </View>
+    const renderItem = ({ item }) => {
+        if (viewType === 'list') {
+            return (
                 <TouchableOpacity
-                    style={globalStyles.homeOwnerButton}
-                    onPress={() => {
-                        if (item.owner?.id != null) {
-                            navigation.navigate('PublicProfile', { userId: item.owner.id });
-                        }
-                    }}
-                    activeOpacity={item.owner?.id != null ? 0.7 : 1}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={globalStyles.homeListCard}
+                    onPress={() => navigation.navigate('PublicBord', { item })}
+                    activeOpacity={0.8}
                 >
                     <Image
-                        source={ownerAvatar(item.owner)}
-                        style={globalStyles.homeOwnerAvatar}
+                        source={{ uri: Config.API_BASE_URL + item.filePath }}
+                        style={globalStyles.homeListThumb}
                     />
+                    <View style={globalStyles.homeListInfo}>
+                        <Text style={globalStyles.homeListTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={globalStyles.homeListDesc} numberOfLines={2}>{item.description}</Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (item.owner?.id != null) {
+                                navigation.navigate('PublicProfile', { userId: item.owner.id });
+                            }
+                        }}
+                        activeOpacity={item.owner?.id != null ? 0.7 : 1}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                        <Image source={ownerAvatar(item.owner)} style={globalStyles.homeListAvatar} />
+                    </TouchableOpacity>
                 </TouchableOpacity>
-            </View>
-        </TouchableOpacity>
-    );
+            );
+        }
+
+        return (
+            <TouchableOpacity
+                style={[
+                    globalStyles.card,
+                    viewType === 'grid' && globalStyles.homeCardGrid,
+                ]}
+                onPress={() => navigation.navigate('PublicBord', { item })}
+                activeOpacity={0.8}
+            >
+                <Image
+                    source={{ uri: Config.API_BASE_URL + item.filePath }}
+                    style={globalStyles.modelListImage}
+                />
+                <View style={globalStyles.homeCardBody}>
+                    <View style={globalStyles.homeCardText}>
+                        <Text style={[globalStyles.titleText, globalStyles.homeCardTitleText, { fontSize: scaleText(16) }]}>
+                            {item.title}
+                        </Text>
+                        <Text style={[globalStyles.descriptionText, globalStyles.homeCardDescText, { fontSize: scaleText(14) }]}>
+                            {item.description}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={globalStyles.homeOwnerButton}
+                        onPress={() => {
+                            if (item.owner?.id != null) {
+                                navigation.navigate('PublicProfile', { userId: item.owner.id });
+                            }
+                        }}
+                        activeOpacity={item.owner?.id != null ? 0.7 : 1}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                        <Image
+                            source={ownerAvatar(item.owner)}
+                            style={globalStyles.homeOwnerAvatar}
+                        />
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+
 
     const handleScroll = (event) => {
         setShowScrollTop(event.nativeEvent.contentOffset.y > 100);
@@ -155,17 +190,24 @@ export default function HomeScreen({navigation, setGlobalError, setGlobalLoading
                     />
                 </TouchableOpacity>
                 <View style={globalStyles.homeToggleRight}>
+                    <TouchableOpacity onPress={() => setViewType('card')} style={globalStyles.homeToggleListButton}>
+                        <FontAwesome
+                            name="square"
+                            size={22}
+                            color={viewType === 'card' ? 'blue' : 'gray'}
+                        />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => setViewType('list')} style={globalStyles.homeToggleListButton}>
                         <FontAwesome
                             name="list"
-                            size={24}
+                            size={22}
                             color={viewType === 'list' ? 'blue' : 'gray'}
                         />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setViewType('grid')}>
                         <FontAwesome
                             name="th-large"
-                            size={24}
+                            size={22}
                             color={viewType === 'grid' ? 'blue' : 'gray'}
                         />
                     </TouchableOpacity>
@@ -197,6 +239,7 @@ export default function HomeScreen({navigation, setGlobalError, setGlobalLoading
                 key={viewType}
                 keyExtractor={(item) => item.id.toString()}
                 numColumns={viewType === 'grid' ? 2 : 1}
+
                 contentContainerStyle={globalStyles.listContainer}
                 renderItem={renderItem}
                 onEndReached={handleEndReached}

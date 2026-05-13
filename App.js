@@ -23,6 +23,10 @@ import HomeScreen from './screens/home/HomeScreen';
 import PublicBordScreen from './screens/lego/boards/PublicBordScreen';
 import PublicSetDetailScreen from './screens/lego/set/PublicSetDetailScreen';
 import PublicProfileScreen from './screens/profile/PublicProfileScreen';
+import ProfileConfigScreen from './screens/profile/ProfileConfigScreen';
+import ProfilePictureScreen from './screens/profile/ProfilePictureScreen';
+import ProfileEditScreen from './screens/profile/ProfileEditScreen';
+import FriendsScreen from './screens/social/FriendsScreen';
 
 function ErrorBanner({error, onDismiss}) {
     if (!error) return null;
@@ -54,6 +58,7 @@ const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const BordenStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
+const FriendsStack = createNativeStackNavigator();
 
 const stackScreenOptions = {
     headerTitleAlign: 'center',
@@ -103,13 +108,41 @@ function BordenStackNavigator({setGlobalError, setGlobalLoading}) {
 function ProfileStackNavigator({setGlobalError, setGlobalLoading}) {
     return (
         <ProfileStack.Navigator screenOptions={stackScreenOptions}>
-            <ProfileStack.Screen name="ProfileScreen" options={{title: 'Profile'}}>
+            <ProfileStack.Screen
+                name="ProfileScreen"
+                options={{title: 'Profile'}}
+            >
                 {props => <ProfileScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+            </ProfileStack.Screen>
+            <ProfileStack.Screen name="PublicProfile" options={{title: 'Profile'}}>
+                {props => <PublicProfileScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
             </ProfileStack.Screen>
             <ProfileStack.Screen name="ChangePassword" options={{title: 'Change Password'}}>
                 {props => <ChangePasswordScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
             </ProfileStack.Screen>
+            <ProfileStack.Screen name="ProfileConfig" options={{title: 'Instellingen'}}>
+                {props => <ProfileConfigScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+            </ProfileStack.Screen>
+            <ProfileStack.Screen name="ProfilePicture" options={{title: 'Profielfoto'}}>
+                {props => <ProfilePictureScreen {...props}/>}
+            </ProfileStack.Screen>
+            <ProfileStack.Screen name="ProfileEdit" options={{title: 'Bewerk profiel'}}>
+                {props => <ProfileEditScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+            </ProfileStack.Screen>
         </ProfileStack.Navigator>
+    );
+}
+
+function FriendsStackNavigator({setGlobalError, setGlobalLoading}) {
+    return (
+        <FriendsStack.Navigator screenOptions={stackScreenOptions}>
+            <FriendsStack.Screen name="FriendsScreen" options={{title: 'Vrienden'}}>
+                {props => <FriendsScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+            </FriendsStack.Screen>
+            <FriendsStack.Screen name="PublicProfile" options={{title: 'Profile'}}>
+                {props => <PublicProfileScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+            </FriendsStack.Screen>
+        </FriendsStack.Navigator>
     );
 }
 
@@ -121,6 +154,7 @@ function AppTabs({setGlobalError, setGlobalLoading}) {
                     let iconName;
                     if (route.name === 'Home') iconName = 'home-outline';
                     else if (route.name === 'Profile') iconName = 'person-outline';
+                    else if (route.name === 'Vrienden') iconName = 'people-outline';
                     else if (route.name === 'Borden') iconName = 'albums-outline';
                     else if (route.name === 'Logout') iconName = 'log-out-outline';
                     return <Ionicons name={iconName} size={size} color={color}/>;
@@ -141,8 +175,21 @@ function AppTabs({setGlobalError, setGlobalLoading}) {
             >
                 {props => <HomeStackNavigator {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
             </Tab.Screen>
-            <Tab.Screen name="Profile">
+            <Tab.Screen
+                name="Profile"
+                listeners={({navigation}) => ({
+                    tabPress: () => {
+                        navigation.navigate('Profile', {screen: 'ProfileScreen'});
+                    },
+                })}
+            >
                 {props => <ProfileStackNavigator {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+            </Tab.Screen>
+            <Tab.Screen
+                name="Vrienden"
+                options={{unmountOnBlur: true}}
+            >
+                {props => <FriendsStackNavigator {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
             </Tab.Screen>
             <Tab.Screen
                 name="Borden"
@@ -203,6 +250,9 @@ export default function App() {
                 </RootStack.Screen>
                 <RootStack.Screen name="ResetPassword" options={{title: 'Reset Password'}}>
                     {props => <ResetPasswordScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
+                </RootStack.Screen>
+                <RootStack.Screen name="ChangePassword" options={{title: 'Change Password'}}>
+                    {props => <ChangePasswordScreen {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}
                 </RootStack.Screen>
                 <RootStack.Screen name="MainTabs" options={{headerShown: false}}>
                     {props => <AppTabs {...props} setGlobalError={setGlobalError} setGlobalLoading={setGlobalLoading}/>}

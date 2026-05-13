@@ -24,7 +24,7 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
     const numColumns = viewType === 'grid' ? 2 : 1;
     const cardWidth = (screenWidth - cardMargin * 2 - gridSpacing * (numColumns - 1)) / numColumns;
 
-    const scaleText = (baseSize) => Math.max(12, Math.min(baseSize, cardWidth / 10));
+    const scaleText = useCallback((baseSize) => Math.max(12, Math.min(baseSize, cardWidth / 10)), [cardWidth]);
 
     useFocusEffect(
         useCallback(() => {
@@ -55,47 +55,43 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
         setModalVisible(true);
     };
 
-    const renderItem = ({ item }) => (
+    const renderItem = useCallback(({ item }) => (
         <TouchableOpacity
-            style={[
-                globalStyles.card,
-                viewType === 'grid' && { flex: 1, margin: gridSpacing }
-            ]}
+            style={[globalStyles.card, viewType === 'grid' && {flex: 1, margin: gridSpacing}]}
             onPress={() => {
                 if (item.isSet) {
-                    navigation.navigate('SetDetail', { item, bordId: bord.id  });
+                    navigation.navigate('SetDetail', {item, bordId: bord.id});
                 } else {
-                    navigation.push('Bord', { item });
+                    navigation.push('Bord', {item});
                 }
             }}
             activeOpacity={0.8}
         >
             {item.filePath && (
                 <Image
-                    source={{ uri: Config.API_BASE_URL + item.filePath }}
+                    source={{uri: Config.API_BASE_URL + item.filePath}}
                     style={globalStyles.modelListImage}
                 />
             )}
-
-            <Text style={[globalStyles.titleText, { fontSize: scaleText(16) }]}>
+            <Text style={[globalStyles.titleText, {fontSize: scaleText(16)}]}>
                 {item.isSet ? `${item.id} ${item.title}` : item.title}
             </Text>
         </TouchableOpacity>
-    );
+    ), [viewType, gridSpacing, navigation, bord.id, scaleText]);
 
     return (
-        <View style={{ flex: 1, padding: 16 }}>
+        <View style={globalStyles.screenPadding}>
             {/* Top buttons row */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={handleAddBord} style={{ marginRight: 16 }}>
+            <View style={globalStyles.bordActionRow}>
+                <View style={globalStyles.bordActionGroup}>
+                    <TouchableOpacity onPress={handleAddBord}>
                         <MaterialIcons name="playlist-add" size={28} color="green" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleAddItem}>
                         <MaterialIcons name="post-add" size={28} color="blue" />
                     </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: 'row' }}>
+                <View style={globalStyles.bordActionGroup}>
                     <TouchableOpacity onPress={handleEditBord}>
                         <MaterialIcons name="edit" size={28} color="orange" />
                     </TouchableOpacity>
@@ -109,7 +105,7 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
             {bord.filePath && (
                 <Image
                     source={{ uri: Config.API_BASE_URL + bord.filePath }}
-                    style={{ width: '100%', height: 200, borderRadius: 12 }}
+                    style={globalStyles.bordHeaderImage}
                     resizeMode="cover"
                 />
             )}
@@ -119,12 +115,12 @@ export default function BordScreen({ route, navigation, setGlobalError, setGloba
             <Text style={[globalStyles.descriptionText, { marginTop: 8 }]}>{bord.description}</Text>
 
             {/* View toggle */}
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginVertical: 10 }}>
-                <TouchableOpacity onPress={() => setViewType('list')} style={{ marginRight: 10 }}>
-                    <FontAwesome name="list" size={24} color={viewType === 'list' ? 'blue' : 'gray'} />
+            <View style={globalStyles.listViewToggle}>
+                <TouchableOpacity onPress={() => setViewType('list')} style={globalStyles.homeToggleListButton}>
+                    <FontAwesome name="list" size={22} color={viewType === 'list' ? 'blue' : 'gray'} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setViewType('grid')}>
-                    <FontAwesome name="th-large" size={24} color={viewType === 'grid' ? 'blue' : 'gray'} />
+                    <FontAwesome name="th-large" size={22} color={viewType === 'grid' ? 'blue' : 'gray'} />
                 </TouchableOpacity>
             </View>
 

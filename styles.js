@@ -129,31 +129,36 @@ export const globalStyles = StyleSheet.create({
     nameText: {
         fontSize: 24,
         fontWeight: 'bold',
+        lineHeight: 30,
         color: '#333',
         marginBottom: 8,
     },
     emailText: {
         fontSize: 18,
+        lineHeight: 24,
         color: '#666',
     },
     titleText: {
         fontSize: 21,
         fontWeight: 'bold',
+        lineHeight: 28,
         marginTop: 8,
         marginBottom: 8,
-        marginLeft:8,
+        marginLeft: 8,
     },
     titleSetText: {
         fontSize: 21,
         fontWeight: 'bold',
+        lineHeight: 28,
         marginTop: 0,
         marginBottom: 8,
     },
     descriptionText: {
         fontSize: 14,
+        lineHeight: 20,
         color: '#555',
         marginBottom: 8,
-        marginLeft:8,
+        marginLeft: 8,
     },
     setText: {
         fontSize: 14,
@@ -647,6 +652,48 @@ export const globalStyles = StyleSheet.create({
     homeScreenContainer: {
         flex: 1,
     },
+    homeListCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        marginBottom: 10,
+        overflow: 'hidden',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+    },
+    homeListThumb: {
+        width: 80,
+        height: 80,
+        resizeMode: 'cover',
+    },
+    homeListInfo: {
+        flex: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+    },
+    homeListTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        lineHeight: 20,
+        color: '#222',
+        marginBottom: 3,
+    },
+    homeListDesc: {
+        fontSize: 12,
+        lineHeight: 16,
+        color: '#666',
+    },
+    homeListAvatar: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        backgroundColor: '#e1e1e1',
+        marginRight: 10,
+    },
     homeToggleBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -757,5 +804,80 @@ export const globalStyles = StyleSheet.create({
         marginTop: 8,
         fontSize: 12,
         textAlign: "center",
+    },
+
+    // Shared screen container with padding (BordScreen, PublicBordScreen)
+    screenPadding: {
+        flex: 1,
+        padding: 16,
+    },
+    // Bord detail header image
+    bordHeaderImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
+    },
+    // Action toolbar row at top of bord screen (add/edit/delete buttons)
+    bordActionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    // Group of action icon buttons with spacing
+    bordActionGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    // Right-aligned view toggle row (list/grid)
+    listViewToggle: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginVertical: 10,
+    },
+    // Section title for settings/config screens (ProfileConfig, ProfilePicture)
+    settingsSectionTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        lineHeight: 22,
+        color: '#333',
+        alignSelf: 'flex-start',
+        borderBottomWidth: 1,
+        borderBottomColor: '#ccc',
+        paddingBottom: 6,
+        marginBottom: 12,
+        width: '100%',
+    },
+    // Menu row for settings/config screens
+    settingsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 14,
+    },
+    // Label in settings/config rows
+    settingsLabel: {
+        fontSize: 14,
+        lineHeight: 20,
+        color: '#444',
+        fontWeight: '500',
+        flex: 1,
+    },
+    // Red delete label in settings/config rows
+    settingsDeleteLabel: {
+        color: '#dc3545',
+    },
+    // Full-screen image preview overlay (ProfileScreen, PublicProfileScreen)
+    imagePreviewOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    // Full-screen image preview image
+    imagePreviewImage: {
+        width: '100%',
+        height: '100%',
     },
 });

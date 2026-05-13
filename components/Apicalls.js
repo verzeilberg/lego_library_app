@@ -152,19 +152,23 @@ export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlob
  */
 export const handlePasswordSubmit = async (password, navigation, setGlobalError, setGlobalLoading) => {
     const resetToken = await AsyncStorage.getItem('reset-password-token');
+    const extraHeaders = resetToken
+        ? {'Authorization': `Bearer ${resetToken}`, 'Content-Type': 'application/merge-patch+json'}
+        : {'Content-Type': 'application/merge-patch+json'};
     try {
         const response = await apiFetch('/api/user/patch', {
             method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${resetToken}`,
-                'Content-Type': 'application/merge-patch+json',
-            },
+            headers: extraHeaders,
             body: JSON.stringify({plainPassword: password}),
         });
 
         await response.json();
-        await AsyncStorage.removeItem('reset-password-token');
-        navigation.navigate('Login');
+        if (resetToken) {
+            await AsyncStorage.removeItem('reset-password-token');
+            navigation.navigate('Login');
+        } else {
+            navigation.goBack();
+        }
     } catch (error) {
         setGlobalError('Error saving: ' + error.message);
     } finally {
@@ -778,7 +782,7 @@ export const uploadImagesToSet = async (images, setNumber, listId, setGlobalErro
  */
 export const fetchData = async (setData, setGlobalError, setGlobalLoading) => {
     try {
-        const response = await apiFetch('/api/user-data', {
+        const response = await apiFetch('/api/user-data/', {
             headers: {'Content-Type': 'application/json'},
         });
 
@@ -882,6 +886,93 @@ export const fetchPublicUserBords = async (userId, setData, setGlobalError, setG
         setGlobalError(error.message || 'Something went wrong!');
     } finally {
         setGlobalLoading(false);
+    }
+};
+
+export const updateNotificationPreferences = async (prefs, setGlobalError) => {
+    try {
+        const response = await apiFetch('/api/notification-preferences', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(prefs),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            setGlobalError(result.message || 'Could not save preferences');
+            return null;
+        }
+        return result.notificationPreferences;
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+        return null;
+    }
+};
+
+export const fetchFriends = async (setData, setGlobalError, setGlobalLoading) => {
+    try {
+        const response = await apiFetch('/api/friends');
+        if (!response.ok) {
+            setGlobalError('Could not load friends');
+            return;
+        }
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+export const fetchFriendshipStatus = async (userId, setStatus, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/friends/status/${userId}`);
+        if (!response.ok) return;
+        setStatus(await response.json());
+    } catch (_) {}
+};
+
+export const sendFriendRequest = async (userId, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/friends/request/${userId}`, {method: 'POST'});
+        const result = await response.json();
+        if (!response.ok) {
+            setGlobalError(result.message || 'Could not send friend request');
+            return null;
+        }
+        return result;
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+        return null;
+    }
+};
+
+export const acceptFriendRequest = async (requestId, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/friends/accept/${requestId}`, {method: 'POST'});
+        if (!response.ok) {
+            const result = await response.json();
+            setGlobalError(result.message || 'Could not accept request');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+        return false;
+    }
+};
+
+export const removeFriend = async (friendshipId, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/friends/${friendshipId}`, {method: 'DELETE'});
+        if (!response.ok) {
+            const result = await response.json();
+            setGlobalError(result.message || 'Could not remove friend');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+        return false;
     }
 };
 
