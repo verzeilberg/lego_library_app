@@ -1,22 +1,26 @@
 import React, {useState, useRef} from 'react';
 import {View, TextInput, Text, Pressable} from 'react-native';
-import {globalStyles} from "../../styles";
+import {useStyles} from "../../styles";
 import {handleChange, handleKeyPress} from "../../utils/formUtils";
 import {handleForgotPasswordCodeSubmit} from "../../components/Apicalls";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 
 export default function FourDigitCodeInput({navigation, setGlobalError, setGlobalLoading}) {
+    const styles = useStyles();
     const [code, setCode] = useState(['', '', '', '']);
     const inputRefs = useRef([]);
 
     return (
-        <View style={globalStyles.container}>
-            <Text style={globalStyles.paragraph}>Vul hieronder het 4-cijferige code in die u heeft ontvangen via de mail.</Text>
-            <View style={globalStyles.row}>
+        <View style={styles.flex1}>
+            <ErrorBanner />
+            <View style={styles.container}>
+            <Text style={styles.paragraph}>Vul hieronder het 4-cijferige code in die u heeft ontvangen via de mail.</Text>
+            <View style={styles.row}>
                 {code.map((digit, index) => (
                     <TextInput
                         key={index}
                         ref={(input) => (inputRefs.current[index] = input)}
-                        style={globalStyles.inputNumber}
+                        style={styles.inputNumber}
                         value={digit}
                         onChangeText={(text) => handleChange(text, index, code,  setCode, inputRefs)}
                         onKeyPress={(e) => handleKeyPress(e, index, code, inputRefs)}
@@ -26,14 +30,15 @@ export default function FourDigitCodeInput({navigation, setGlobalError, setGloba
                 ))}
             </View>
             <Pressable
-                style={globalStyles.button}
+                style={styles.button}
                 onPress={() => {
                     setGlobalLoading(true);
                     handleForgotPasswordCodeSubmit(code, setGlobalError, navigation, setGlobalLoading)
                 }}
             >
-                <Text style={globalStyles.text}>Reset</Text>
+                <Text style={[styles.text, {color: '#fff'}]}>Reset</Text>
             </Pressable>
+            </View>
         </View>
     );
 };

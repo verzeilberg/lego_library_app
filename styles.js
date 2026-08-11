@@ -1,8 +1,13 @@
 import { StyleSheet } from 'react-native';
+import { useTheme as useThemeContext } from './theme/ThemeContext';
+import { useMemo } from 'react';
 
-export const globalStyles = StyleSheet.create({
+export { useThemeContext as useTheme };
+
+export const createStyles = (colors) => StyleSheet.create({
     containerKeyboard: {
-      flex:1
+        flex: 1,
+        backgroundColor: colors.background,
     },
     container: {
         marginTop: 20,
@@ -10,9 +15,10 @@ export const globalStyles = StyleSheet.create({
         flex: 0,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: colors.background,
     },
     tabNavigator: {
-      paddingTop: 150,
+        paddingTop: 150,
     },
     row: {
         flexDirection: 'row',
@@ -24,7 +30,7 @@ export const globalStyles = StyleSheet.create({
         fontFamily: "Bangers_400Regular",
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#333',
+        color: colors.text,
         marginBottom: 8,
     },
     input3: {
@@ -33,17 +39,20 @@ export const globalStyles = StyleSheet.create({
     input: {
         width: '100%',
         height: 40,
-        borderColor: 'gray',
+        borderColor: colors.borderInput,
         borderWidth: 1,
         borderRadius: 5,
         marginTop: 10,
         marginBottom: 10,
         paddingHorizontal: 10,
+        color: colors.text,
+        backgroundColor: colors.inputBg,
+        placeholderTextColor: colors.textMuted,
     },
     inputNumber: {
         width: '15%',
         height: 50,
-        borderColor: 'gray',
+        borderColor: colors.borderInput,
         borderWidth: 1,
         borderRadius: 5,
         marginTop: 10,
@@ -51,44 +60,42 @@ export const globalStyles = StyleSheet.create({
         marginLeft: 3,
         marginBottom: 10,
         paddingHorizontal: 20,
-        backgroundColor: 'rgba(149, 165, 166, 0.2)',
+        backgroundColor: colors.inputBgAlt,
         textAlign: 'center',
         fontSize: 20,
+        color: colors.text,
+        placeholderTextColor: colors.textMuted,
     },
     inputPassword: {
         paddingRight: 40,
+        color: colors.text,
     },
     button: {
-        backgroundColor: 'red',
-        width: '80%',
-        height: 45,
+        backgroundColor: '#fe0000',
+        width: '100%',
+        height: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 32,
-        borderWidth: 1,
-        borderColor: 'gray',
-        borderRadius: 4,
-        elevation: 3,
+        borderRadius: 5,
         marginTop: 10,
-        shadowColor: '#171717',
-        shadowOffset: {width: -2, height: 4},
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        fontFamily: 'Newester-Bold',
     },
-    stretch : {
-        width: '50%',
-        height: '50%',
-        resizeMode: "center",
+    stretch: {
+        width: '95%',
+        height: 180,
+        resizeMode: "contain",
     },
     text: {
-        fontSize: 16,
-        lineHeight: 16,
+        fontSize: 18,
+        lineHeight: 22,
         fontWeight: 'bold',
         letterSpacing: 0.50,
-        color: 'white',
-        marginRight: 15,
+    },
+    buttonText: {
+        fontSize: 18,
+        lineHeight: 22,
+        fontWeight: 'bold',
+        letterSpacing: 0.50,
+        color: '#fff',
     },
     textContainer: {
         flex: 1,
@@ -96,18 +103,19 @@ export const globalStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     paragraph: {
-        width:'80%',
+        width: '80%',
         marginTop: 20,
+        color: colors.text,
     },
     linking: {
         marginBottom: 20,
     },
     link: {
-        color: 'black',
+        color: colors.link,
         fontSize: 16,
     },
     errorText: {
-        color: 'red',
+        color: colors.danger,
         marginBottom: 20,
     },
     inputContainer: {
@@ -124,19 +132,19 @@ export const globalStyles = StyleSheet.create({
         height: 220,
         borderRadius: 120,
         marginBottom: 20,
-        marginTop:20,
+        marginTop: 20,
     },
     nameText: {
         fontSize: 24,
         fontWeight: 'bold',
         lineHeight: 30,
-        color: '#333',
+        color: colors.text,
         marginBottom: 8,
     },
     emailText: {
         fontSize: 18,
         lineHeight: 24,
-        color: '#666',
+        color: colors.textSecondary,
     },
     titleText: {
         fontSize: 21,
@@ -145,6 +153,7 @@ export const globalStyles = StyleSheet.create({
         marginTop: 8,
         marginBottom: 8,
         marginLeft: 8,
+        color: colors.text,
     },
     titleSetText: {
         fontSize: 21,
@@ -152,17 +161,18 @@ export const globalStyles = StyleSheet.create({
         lineHeight: 28,
         marginTop: 0,
         marginBottom: 8,
+        color: colors.text,
     },
     descriptionText: {
         fontSize: 14,
         lineHeight: 20,
-        color: '#555',
+        color: colors.textSecondary,
         marginBottom: 8,
         marginLeft: 8,
     },
     setText: {
         fontSize: 14,
-        color: '#555',
+        color: colors.textSecondary,
     },
     imageRoundContainer: {
         width: 150,
@@ -170,32 +180,32 @@ export const globalStyles = StyleSheet.create({
         borderRadius: 75,
         overflow: 'hidden',
         marginBottom: 20,
-        backgroundColor: '#e1e1e1',
+        backgroundColor: colors.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
     parentImageRectangleContainer: {
         width: "100%",
         aspectRatio: 16 / 9,
-        backgroundColor: '#e1e1e1',
+        backgroundColor: colors.border,
         borderRadius: 5,
     },
     imageRectangleContainer: {
         width: "100%",
-        backgroundColor: "#e1e1e1",
+        backgroundColor: colors.border,
         aspectRatio: 16 / 9,
         padding: 15,
         borderRadius: 8,
         alignItems: "center",
     },
     placeholder: {
-        color: '#777',
+        color: colors.placeholder,
     },
     editButton: {
         position: 'absolute',
         top: 10,
         right: 10,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: colors.toggleBg,
         padding: 8,
         borderRadius: 5,
     },
@@ -211,7 +221,7 @@ export const globalStyles = StyleSheet.create({
     },
     hamburgerText: {
         fontSize: 24,
-        color: '#fff',
+        color: colors.headerTitle,
     },
     closeButton: {
         position: 'absolute',
@@ -220,7 +230,7 @@ export const globalStyles = StyleSheet.create({
     },
     closeText: {
         fontSize: 45,
-        color: '#fff',
+        color: colors.closeButton,
     },
     sideBar: {
         position: 'absolute',
@@ -228,7 +238,7 @@ export const globalStyles = StyleSheet.create({
         bottom: 0,
         left: -250,
         width: 250,
-        backgroundColor: '#5a5a5a',
+        backgroundColor: colors.sidebarBg,
         padding: 0,
         justifyContent: 'center',
         zIndex: 100,
@@ -239,19 +249,19 @@ export const globalStyles = StyleSheet.create({
         flexGrow: 1,
     },
     card: {
-        backgroundColor: '#fff',
+        backgroundColor: colors.surface,
         marginBottom: 20,
         borderRadius: 12,
         overflow: 'hidden',
         elevation: 3,
-        shadowColor: '#000',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
     modelListImage: {
         width: '100%',
-        aspectRatio: 4 / 3, // past automatisch aan de breedte aan
+        aspectRatio: 4 / 3,
         resizeMode: 'cover',
     },
     modalPlaceHolder: {
@@ -259,7 +269,7 @@ export const globalStyles = StyleSheet.create({
     },
     modalBackground: {
         flex: 1,
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         alignItems: 'center',
         borderTopRightRadius: 16,
         borderTopLeftRadius: 16,
@@ -273,6 +283,7 @@ export const globalStyles = StyleSheet.create({
     modalText: {
         fontSize: 18,
         marginBottom: 20,
+        color: colors.text,
     },
     modalCloseButton: {
         padding: 6,
@@ -281,64 +292,66 @@ export const globalStyles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: '#007AFF',
-        elevation: 5, // for Android shadow
-        shadowColor: '#000', // for iOS shadow
+        backgroundColor: colors.accent,
+        elevation: 5,
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
     },
     modalInputFields: {
-            width: '100%',
-            alignItems: 'center',
+        width: '100%',
+        alignItems: 'center',
     },
     buttonText: {
-        color: 'white',
+        color: colors.textLight,
         fontWeight: 'bold',
-        fontSize: 18
+        fontSize: 20,
+        letterSpacing: 0.5,
     },
     openModalButton: {
         position: 'absolute',
         right: 10,
         bottom: 50,
-        backgroundColor: '#007AFF',
+        backgroundColor: colors.accent,
         width: 40,
         height: 40,
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 5, // for Android shadow
-        shadowColor: '#000', // for iOS shadow
+        elevation: 5,
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
     },
     openModalButtonText: {
         flex: 1,
-        color: '#fff',
+        color: colors.textLight,
         fontSize: 30,
-        lineHeight: 37
+        lineHeight: 37,
     },
     counterLimit: {
-        color: 'red',
+        color: colors.danger,
         fontWeight: 'bold',
     },
     textArea: {
         width: '100%',
         height: 120,
-        borderColor: 'gray',
+        borderColor: colors.borderInput,
         borderWidth: 1,
         padding: 10,
         borderRadius: 8,
         fontSize: 16,
-        backgroundColor: '#fff',
+        backgroundColor: colors.surface,
+        color: colors.text,
         marginBottom: 10,
+        placeholderTextColor: colors.textMuted,
     },
-
     input2: {
-        borderColor: 'gray',
+        borderColor: colors.borderInput,
         borderWidth: 1,
-        paddingRight: 60, // ruimte voor de counter
+        paddingRight: 60,
         paddingLeft: 10,
         fontSize: 16,
         width: '100%',
@@ -347,6 +360,9 @@ export const globalStyles = StyleSheet.create({
         marginTop: 10,
         marginBottom: 10,
         paddingHorizontal: 10,
+        color: colors.text,
+        backgroundColor: colors.inputBg,
+        placeholderTextColor: colors.textMuted,
     },
     pickerContainer: {
         width: '100%',
@@ -359,14 +375,15 @@ export const globalStyles = StyleSheet.create({
         left: 10,
         fontSize: 16,
         fontWeight: 'bold',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: colors.pickerBg,
         paddingHorizontal: 5,
         zIndex: 99,
+        color: colors.text,
     },
     pickerWrapper: {
         width: '100%',
         height: 45,
-        borderColor: 'gray',
+        borderColor: colors.borderInput,
         borderWidth: 1,
         borderRadius: 5,
         justifyContent: 'center',
@@ -374,32 +391,36 @@ export const globalStyles = StyleSheet.create({
     picker: {
         width: '100%',
         fontSize: 10,
-        color: '#000',
+        color: colors.pickerText,
     },
     pickerItem: {
         fontSize: 14,
+        color: colors.pickerText,
     },
     floatLabelInput: {
         width: '100%',
         height: 45,
-        borderColor: 'gray',
+        borderColor: colors.borderInput,
         borderWidth: 1,
         borderRadius: 5,
         marginTop: 10,
         marginBottom: 10,
         paddingHorizontal: 13,
         fontSize: 14,
+        color: colors.text,
+        backgroundColor: colors.inputBg,
+        placeholderTextColor: colors.textMuted,
     },
     counter: {
         position: 'absolute',
         right: 10,
         top: 10,
         fontSize: 14,
-        color: 'gray',
+        color: colors.textMuted,
         backgroundColor: 'transparent',
     },
     profileImageEditText: {
-        color: 'red',
+        color: colors.danger,
         fontWeight: 'bold',
         fontSize: 14,
         textAlign: 'center',
@@ -409,25 +430,24 @@ export const globalStyles = StyleSheet.create({
     imagePlaceholder: {
         position: 'absolute',
         marginTop: 10,
-        backgroundColor: '#FF4D4D',
+        backgroundColor: colors.dangerLight,
         padding: 2,
         borderRadius: 15,
         bottom: 20,
         right: 0,
     },
-    // Generic
     flex1: {
         flex: 1,
+        backgroundColor: colors.background,
     },
     bold: {
         fontWeight: 'bold',
     },
-
-    // SetDetailScreen
     setDetailLoadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: colors.background,
     },
     setDetailSlideContainer: {
         padding: 16,
@@ -435,26 +455,29 @@ export const globalStyles = StyleSheet.create({
     },
     setDetailSlideTitle: {
         fontSize: 18,
+        color: colors.text,
     },
     setDetailSlideIntro: {
         fontSize: 14,
         marginBottom: 10,
+        color: colors.textSecondary,
     },
     setDetailRatingLabel: {
         fontWeight: 'bold',
         marginRight: 8,
+        color: colors.text,
     },
     setDetailQuantityText: {
         marginTop: 4,
     },
     textMissing: {
-        color: 'red',
+        color: colors.statusMissing,
     },
     textBroken: {
-        color: 'orange',
+        color: colors.statusBroken,
     },
     textDiscoloured: {
-        color: '#b8860b',
+        color: colors.statusDiscoloured,
     },
     setDetailStatusIcon: {
         marginLeft: 4,
@@ -473,9 +496,11 @@ export const globalStyles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1.5,
         gap: 4,
+        borderColor: colors.borderDark,
     },
     setDetailDropdownBtnText: {
         fontSize: 13,
+        color: colors.textSecondary,
     },
     setDetailDropdownModalContent: {
         paddingVertical: 8,
@@ -488,14 +513,16 @@ export const globalStyles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     setDetailSortOptionActive: {
-        backgroundColor: '#eee',
+        backgroundColor: colors.surfaceAlt,
     },
     setDetailSortOptionText: {
         fontSize: 15,
+        color: colors.text,
     },
     setDetailSortOptionTextBold: {
         fontSize: 15,
         fontWeight: 'bold',
+        color: colors.text,
     },
     setDetailFilterOption: {
         flexDirection: 'row',
@@ -506,6 +533,7 @@ export const globalStyles = StyleSheet.create({
     },
     setDetailCounterLabel: {
         width: 120,
+        color: colors.text,
     },
     arrowLeft: {
         left: 10,
@@ -519,15 +547,17 @@ export const globalStyles = StyleSheet.create({
         marginBottom: 16,
     },
     divider: {
-        height: 2,
-        backgroundColor: 'black',
+        height: 1,
+        backgroundColor: colors.divider,
         width: '100%',
-        marginVertical: 8,
+        marginVertical: 16,
+        opacity: 0.15,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginTop: 16,
         marginBottom: 16,
         paddingHorizontal: 16,
     },
@@ -535,6 +565,7 @@ export const globalStyles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         flexShrink: 1,
+        color: colors.text,
     },
     headerIcons: {
         flexDirection: 'row',
@@ -567,7 +598,7 @@ export const globalStyles = StyleSheet.create({
         position: 'absolute',
         top: 8,
         right: 8,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: colors.toggleBg,
         borderRadius: 16,
         padding: 4,
     },
@@ -585,7 +616,7 @@ export const globalStyles = StyleSheet.create({
         marginBottom: 8,
         paddingVertical: 3,
         alignItems: 'center',
-        borderTopColor: '#808080',
+        borderTopColor: colors.borderDark,
         borderTopWidth: 1,
         borderRadius: 5,
     },
@@ -595,32 +626,65 @@ export const globalStyles = StyleSheet.create({
         borderRadius: 12,
         marginRight: 10,
     },
-    modalOverlay: {flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "center", alignItems: "center"},
-    modalContent: {width: "85%", backgroundColor: "white", borderRadius: 12, padding: 20},
-    modalTitle: {fontSize: 18, fontWeight: "bold", marginBottom: 20},
-    counterRow: {flexDirection: "row", alignItems: "center", marginVertical: 8},
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: colors.modalOverlay,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: {
+        width: "85%",
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 20,
+        color: colors.text,
+    },
+    counterRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 8,
+    },
     counterBtn: {
-        backgroundColor: 'red',
+        backgroundColor: colors.primary,
         width: 40,
         height: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'gray',
-        borderRadius: 4,
+        borderRadius: 8,
         elevation: 3,
-        shadowColor: '#171717',
-        shadowOffset: {width: -2, height: 4},
+        shadowColor: colors.cardShadow,
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.2,
         shadowRadius: 3,
     },
     counterBtnText: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: 'white',
+        color: colors.textLight,
     },
-    counterValue: {width: 40, textAlign: "center", fontSize: 16},
-    saveButton: {backgroundColor: "black", padding: 10, borderRadius: 8, alignItems: "center", marginVertical: 10},
+    counterValue: {
+        width: 40,
+        textAlign: "center",
+        fontSize: 16,
+        color: colors.text,
+    },
+    saveButton: {
+        backgroundColor: colors.text,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        marginVertical: 10,
+        elevation: 2,
+        shadowColor: colors.cardShadow,
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+    },
     setDetailCloseButton: {
         position: "absolute",
         top: 8,
@@ -636,31 +700,53 @@ export const globalStyles = StyleSheet.create({
         fontSize: 36,
         fontWeight: "600",
         lineHeight: 36,
+        color: colors.text,
     },
-
-    // Set detail image preview
     setDetailPreviewLoader: {marginTop: 16},
-    setDetailPreviewPartNumber: {textAlign: 'center', marginTop: 8, fontSize: 18, fontWeight: 'bold', color: '#333'},
-    setDetailPreviewNavRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8},
-    setDetailPreviewNavCounter: {color: '#555', fontSize: 13},
-    setDetailPreviewImage: {marginTop: 16, alignSelf: 'center'},
-    setDetailRatingNoMargin: {margin: 0, padding: 0},
-    setDetailDropdownBtnSort: {borderColor: '#555'},
-    setDetailDropdownBtnSortText: {color: '#555'},
-
-    // HomeScreen
+    setDetailPreviewPartNumber: {
+        textAlign: 'center',
+        marginTop: 8,
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: colors.text,
+    },
+    setDetailPreviewNavRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    setDetailPreviewNavCounter: {
+        color: colors.textSecondary,
+        fontSize: 13,
+    },
+    setDetailPreviewImage: {
+        marginTop: 16,
+        alignSelf: 'center',
+    },
+    setDetailRatingNoMargin: {
+        margin: 0,
+        padding: 0,
+    },
+    setDetailDropdownBtnSort: {
+        borderColor: colors.borderDark,
+    },
+    setDetailDropdownBtnSortText: {
+        color: colors.textSecondary,
+    },
     homeScreenContainer: {
         flex: 1,
+        backgroundColor: colors.background,
     },
     homeListCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: colors.surface,
         borderRadius: 10,
         marginBottom: 10,
         overflow: 'hidden',
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,
         shadowRadius: 3,
@@ -679,19 +765,19 @@ export const globalStyles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         lineHeight: 20,
-        color: '#222',
+        color: colors.text,
         marginBottom: 3,
     },
     homeListDesc: {
         fontSize: 12,
         lineHeight: 16,
-        color: '#666',
+        color: colors.textSecondary,
     },
     homeListAvatar: {
         width: 34,
         height: 34,
         borderRadius: 17,
-        backgroundColor: '#e1e1e1',
+        backgroundColor: colors.border,
         marginRight: 10,
     },
     homeToggleBar: {
@@ -719,14 +805,16 @@ export const globalStyles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderWidth: 1,
-        borderColor: '#ccc',
+        borderColor: colors.borderDark,
         borderRadius: 8,
         fontSize: 16,
-        backgroundColor: '#fff',
+        backgroundColor: colors.surface,
+        color: colors.text,
         marginRight: 8,
+        placeholderTextColor: colors.textMuted,
     },
     homeSearchButton: {
-        backgroundColor: '#007bff',
+        backgroundColor: colors.primaryLight,
         paddingHorizontal: 14,
         paddingVertical: 10,
         borderRadius: 8,
@@ -752,17 +840,48 @@ export const globalStyles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#007bff',
+        backgroundColor: colors.headerBg,
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 4,
-        shadowColor: '#000',
+        shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 4,
     },
-
-    // HomeScreen card owner
+    homeScrollTopIcon: {
+        marginBottom: 3,
+    },
+    typeBadge: {
+        position: 'absolute',
+        top: 6,
+        left: 6,
+        zIndex: 10,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+    },
+    typeBadgeSet: {
+        backgroundColor: '#0055BF',
+    },
+    typeBadgeBord: {
+        backgroundColor: '#FE8A18',
+    },
+    typeBadgeText: {
+        color: '#ffffff',
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
+    iconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 6,
+        borderWidth: 1.5,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     homeCardBody: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -783,10 +902,8 @@ export const globalStyles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#e1e1e1',
+        backgroundColor: colors.border,
     },
-
-    //Rating slider
     containerSlider: {
         width: "100%",
     },
@@ -798,86 +915,137 @@ export const globalStyles = StyleSheet.create({
     labelSlider: {
         fontWeight: "bold",
         fontSize: 14,
-        color: '#555',
+        color: colors.textSecondary,
     },
     valueSlider: {
         marginTop: 8,
         fontSize: 12,
         textAlign: "center",
+        color: colors.text,
     },
-
-    // Shared screen container with padding (BordScreen, PublicBordScreen)
     screenPadding: {
         flex: 1,
         padding: 16,
+        backgroundColor: colors.background,
     },
-    // Bord detail header image
     bordHeaderImage: {
         width: '100%',
         height: 200,
         borderRadius: 12,
     },
-    // Action toolbar row at top of bord screen (add/edit/delete buttons)
     bordActionRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 16,
     },
-    // Group of action icon buttons with spacing
     bordActionGroup: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 16,
     },
-    // Right-aligned view toggle row (list/grid)
     listViewToggle: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
         marginVertical: 10,
     },
-    // Section title for settings/config screens (ProfileConfig, ProfilePicture)
     settingsSectionTitle: {
         fontSize: 16,
         fontWeight: '700',
         lineHeight: 22,
-        color: '#333',
+        color: colors.text,
         alignSelf: 'flex-start',
         borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
+        borderBottomColor: colors.borderDark,
         paddingBottom: 6,
         marginBottom: 12,
         width: '100%',
     },
-    // Menu row for settings/config screens
     settingsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: 14,
     },
-    // Label in settings/config rows
     settingsLabel: {
         fontSize: 14,
         lineHeight: 20,
-        color: '#444',
+        color: colors.textSecondary,
         fontWeight: '500',
         flex: 1,
     },
-    // Red delete label in settings/config rows
     settingsDeleteLabel: {
-        color: '#dc3545',
+        color: colors.danger,
     },
-    // Full-screen image preview overlay (ProfileScreen, PublicProfileScreen)
+    profilePictureOverlay: {
+        flex: 1,
+        backgroundColor: colors.overlayLight,
+        justifyContent: 'flex-end',
+    },
+    profilePictureDismissArea: {
+        flex: 1,
+    },
+    profilePictureSheet: {
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 36,
+    },
     imagePreviewOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.9)',
+        backgroundColor: colors.overlayDark,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    // Full-screen image preview image
     imagePreviewImage: {
         width: '100%',
         height: '100%',
     },
+    errorBanner: {
+        alignSelf: 'stretch',
+        marginBottom: 8,
+        backgroundColor: '#8b0000',
+        borderRadius: 0,
+        padding: 12,
+        paddingRight: 36,
+        zIndex: 1000,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        overflow: 'hidden',
+    },
+    errorBannerText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    errorBannerClose: {
+        position: 'absolute',
+        top: 4,
+        right: 6,
+        padding: 4,
+        zIndex: 1001,
+    },
+    errorBannerProgressTrack: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 4,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+    },
+    errorBannerProgressFill: {
+        height: '100%',
+        backgroundColor: '#fff',
+    },
 });
+
+export const useStyles = () => {
+    const { colors } = useThemeContext();
+    return useMemo(() => createStyles(colors), [colors]);
+};

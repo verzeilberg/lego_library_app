@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "lego-library",
+    "name": "Bricks Library",
     "slug": "lego-library",
     "scheme": "lego-library",
     "version": "1.0.0",
@@ -22,7 +22,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/lego_logo.png",
+        "foregroundImage": "./assets/images/lego_logo_adaptive.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.anonymous.legolibrary"

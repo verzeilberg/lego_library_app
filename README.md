@@ -7,12 +7,16 @@ A React Native mobile app for managing your personal LEGO collection. Track your
 ## Features
 
 ### Collection Management
-- Organize sets into **boards** (custom collections)
+- Organize sets into **boards** (custom collections, nestable)
 - Add sets by LEGO set number — set info, parts, and minifigs are fetched automatically
 - Track **missing**, **broken**, and **discoloured** parts per set
 - Rate sets with a personal 5-star rating
 - Upload your own photos per set
 - Export missing parts to **CSV** or **Excel** (Excel includes part images embedded in the file)
+- Search boards and sets by title or ID
+- Move boards between parents
+- Share boards with friends (full edit access — they can add/edit sets, mark parts, and manage the board)
+- **Paginated lists** — boards and board contents load 10 items per page as you scroll, so large collections stay fast
 
 ### Discovery
 - Browse public boards and sets from other users on the home feed
@@ -23,11 +27,14 @@ A React Native mobile app for managing your personal LEGO collection. Track your
 - View other users' public profiles and their boards
 - Send, accept, and decline friend requests
 - Manage your friends list
+- **Share boards** with friends (full edit access — shared users can edit board details, move/delete boards, and edit sets like the owner)
+- Search friends by name
 
 ### Profile
 - Custom profile picture (camera or photo library)
 - Bio, display name, gender
 - Notification preferences (push + email) per event type
+- Dark mode toggle
 - Change or delete your account
 
 ### Authentication
@@ -43,9 +50,10 @@ A React Native mobile app for managing your personal LEGO collection. Track your
 |---|---|
 | Framework | Expo ~54 · React Native 0.81 · React 19 |
 | Navigation | React Navigation 7 (stack + bottom tabs) |
-| UI | React Native Paper · Expo Vector Icons · React Native Vector Icons |
+| UI | Expo Vector Icons · React Native Vector Icons |
 | Animation | React Native Reanimated 4 · Lottie |
-| Images | Expo Image Picker · Expo Image Manipulator · React Native Image Crop Picker |
+| Images | Expo Image Picker · Expo Image Manipulator |
+| Gestures | React Native Gesture Handler |
 | File / Share | Expo File System · Expo Sharing |
 | Storage | AsyncStorage |
 | Auth | JWT Decode |
@@ -74,18 +82,16 @@ lego-library/
 │   └── social/                 # FriendsScreen
 ├── components/
 │   ├── Apicalls.js             # API call helpers
+│   ├── BoardImage.js           # Board cover image (auto-compose)
 │   ├── Functions.js            # Shared utilities
 │   ├── form/                   # FloatingLabelInput
-│   ├── modals/                 # AddModal (boards/sets)
+│   ├── modals/                 # AddModal, ShareModal, MoveModal
 │   ├── rating/                 # RatingStars
 │   └── ui/                     # LoadingSpinner
 ├── services/
-│   ├── api/                    # HTTP client, token storage, token refresh
-│   ├── authService.js
-│   ├── boardService.js
-│   ├── legoService.js
-│   ├── profileService.js
-│   └── userService.js
+│   └── profileService.js       # Delete confirmation dialog
+├── theme/
+│   └── ThemeContext.js         # Light/dark theme with persistence
 ├── utils/
 │   ├── authUtils.js            # Token validation & redirect
 │   ├── imageUtils.js           # Image selection, resize, upload
@@ -145,11 +151,11 @@ npm run ios
 ## Backend
 
 The app requires the **Lego Library API** backend. The API handles:
-- User accounts and JWT authentication
+- User accounts and JWT authentication with automatic token refresh
 - LEGO set data (synced from Rebrickable)
-- Board and set management
+- Board and set management with nesting and sharing
 - Part tracking (missing/broken/discoloured)
-- Friend relationships and notifications
+- Friend relationships, requests, and notifications
 - Profile pictures and set images
 
 Backend source: `/var/www/lego-library-api`
@@ -169,10 +175,9 @@ On the **Parts** tab of any set detail screen, tap the download icon to export m
 
 ### UX & Navigation
 
-- **Search everywhere** — BordenScreen and BordScreen have no search. A search bar (already styled globally) could filter boards by title and sets by name/number.
 - **Pull-to-refresh** — FriendsScreen already has `RefreshControl`. BordenScreen and BordScreen should too; the current focus-reload is not visible to the user.
 - **Better empty states** — most screens show plain "No data available" text. An icon + action button per empty state would feel more polished.
-- **Dark mode** — all colours are hardcoded to light values. Expo supports system colour schemes out of the box.
+- **Breadcrumb / depth indicator** — show how deep you are in nested boards (e.g. a breadcrumb "Borden › Stad › Huizen" in the header, or a "level 3" badge on board cards) so you don't lose your place when drilling down.
 
 ### Collection
 
@@ -197,14 +202,29 @@ On the **Parts** tab of any set detail screen, tap the download icon to export m
 ### Technical & Performance
 
 - **Image caching** — set and part images are fetched fresh every render. Replacing React Native's `Image` with `expo-image` (which has built-in disk caching) would speed up all list screens noticeably.
-- **Pagination on BordenScreen** — all boards are loaded at once. HomeScreen already uses `PAGE_SIZE = 10` with `loadPage`; the same pattern should be applied to BordenScreen and BordScreen for large collections.
 - **Session expiry feedback** — `tokenService.js` silently fails on token refresh. A redirect to the login screen with a "session expired" message would be more user-friendly than a silent API error.
 - **Offline indicator** — a banner (similar to the existing `ErrorBanner`) when the device has no network, replacing confusing "Unknown error" messages.
 
 ### Profile
 
-- **Profile visibility setting** — currently all profiles are fully public. A "friends only" option for boards would match user expectations.
 - **Account stats on profile** — a summary row under the profile picture: `12 boards · 87 sets · 3 friends`. Derivable from existing API data.
+- **Profile visibility setting** — opt-in public profile instead of fully public by default.
+
+### New Features
+
+- **Set comparison tool** — compare parts lists across two sets to find common or unique pieces.
+- **Collection value estimator** — calculate estimated value of your collection based on set part-out prices or Bricklink 6-month average.
+- **Set building progress** — mark a set as "in progress" or "completed" with a date, and track how long it took to build.
+- **Duplicate detection** — flag when the same LEGO set number appears in multiple boards.
+- **Private notes per board** — free-text notes attached to a board (e.g. "gift from grandma", "sold at flea market").
+- **Batch add sets** — paste a list of LEGO set numbers at once instead of adding one by one.
+- **Part color substitution** — when marking a part as missing, suggest an alternate color you own from another incomplete set.
+- **Collection import/export** — export your entire collection (boards + sets) as JSON, and import it on another device.
+- **Set instructions PDF link** — store a link to the official LEGO instructions PDF per set.
+- **Minifigure collection view** — aggregate all minifigures across all sets into a single browsable list.
+- **Theme-based auto-categorization** — automatically group sets by LEGO theme (City, Technic, Star Wars, etc.) using the Rebrickable theme data already returned by the API.
+- **Localization / i18n** — Dutch and English locale support; all user-facing strings are currently hardcoded in Dutch. A translation layer would make the app accessible to a wider audience.
+- **Widget (Android/iOS)** — home screen widget showing a random set from your collection, or quick-add bar for scanning a barcode.
 
 ---
 

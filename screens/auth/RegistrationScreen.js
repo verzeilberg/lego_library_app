@@ -3,9 +3,11 @@ import {View, TextInput, Button, Text, Pressable, TouchableOpacity} from 'react-
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {handleGeneratePassword, togglePasswordVisibility, checkPassword} from '../../utils/passwordUtils';
 import {handleSubmitRegistration} from '../../components/Apicalls'
-import {globalStyles} from '../../styles';
+import {useStyles} from '../../styles';
+import ErrorBanner from '../../components/ui/ErrorBanner';
 
 export default function RegistrationScreen({navigation, setGlobalError, setGlobalLoading}) {
+    const styles = useStyles();
     const [firstname, setFirstname] = useState('');
     const [lastname, setLastname] = useState('');
     const [email, setEmail] = useState('');
@@ -18,21 +20,23 @@ export default function RegistrationScreen({navigation, setGlobalError, setGloba
     }, []);
 
     return (
-        <View style={globalStyles.container}>
+        <View style={styles.flex1}>
+            <ErrorBanner />
+            <View style={styles.container}>
             <TextInput
-                style={globalStyles.input}
+                style={styles.input}
                 placeholder="Firstname"
                 onChangeText={text => setFirstname(text)}
                 value={firstname}
             />
             <TextInput
-                style={globalStyles.input}
+                style={styles.input}
                 placeholder="Lastname"
                 onChangeText={text => setLastname(text)}
                 value={lastname}
             />
             <TextInput
-                style={globalStyles.input}
+                style={styles.input}
                 placeholder="Email"
                 type="email"
                 onChangeText={text => setEmail(text)}
@@ -43,40 +47,40 @@ export default function RegistrationScreen({navigation, setGlobalError, setGloba
                 autoCapitalize="none"
                 autoCorrect={false}
             />
-            <View style={[globalStyles.input, globalStyles.inputContainer]}>
+            <View style={[styles.input, styles.inputContainer]}>
                 <TextInput
-                    style={globalStyles.inputPassword}
+                    style={styles.inputPassword}
                     placeholder="Enter Password"
                     secureTextEntry={isSecure}
                     value={password}
                     onChangeText={setPassword}
                 />
                 <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}
-                                  style={globalStyles.icon}>
+                                  style={styles.icon}>
                     <Icon name={isSecure ? 'eye-slash' : 'eye'} size={20} color="#000"/>
                 </TouchableOpacity>
             </View>
-            <View style={[globalStyles.input, globalStyles.inputContainer]}>
+            <View style={[styles.input, styles.inputContainer]}>
                 <TextInput
-                    style={globalStyles.inputPassword}
+                    style={styles.inputPassword}
                     placeholder="Confirm Password"
                     secureTextEntry={isSecure}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                 />
                 <TouchableOpacity onPress={() => togglePasswordVisibility(isSecure, setIsSecure)}
-                                  style={globalStyles.icon}>
+                                  style={styles.icon}>
                     <Icon name={isSecure ? 'eye-slash' : 'eye'} size={20} color="#000"/>
                 </TouchableOpacity>
 
             </View>
 
             {/* Button to trigger password generation */}
-            <View style={globalStyles.buttonContainer}>
+            <View style={styles.buttonContainer}>
                 <Button title="Generate Password" onPress={() => handleGeneratePassword(setPassword)}/>
             </View>
             <Pressable
-                style={globalStyles.button}
+                style={styles.button}
                 onPress={() => {
                     const doPasswordMatch = checkPassword(password, confirmPassword, setGlobalError);
                     if (doPasswordMatch) {
@@ -86,8 +90,9 @@ export default function RegistrationScreen({navigation, setGlobalError, setGloba
 
                 }}
             >
-                <Text style={globalStyles.text}>Register</Text>
+                <Text style={[styles.text, {color: '#fff'}]}>Register</Text>
             </Pressable>
+            </View>
         </View>
     );
 };

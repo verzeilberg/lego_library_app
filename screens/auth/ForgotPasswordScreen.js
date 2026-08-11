@@ -1,9 +1,11 @@
 import React, {useState} from 'react';
 import {View, TextInput, Text, Pressable} from 'react-native';
-import {globalStyles} from "../../styles";
+import {useStyles} from "../../styles";
 import {handleForgotPasswordSubmit} from "../../components/Apicalls";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 
 const ForgotPasswordScreen = ({navigation, setGlobalError, setGlobalLoading}) => {
+    const styles = useStyles();
     const [email, setEmail] = useState('');
     const handlePress = () => {
         setGlobalLoading(true);
@@ -11,10 +13,12 @@ const ForgotPasswordScreen = ({navigation, setGlobalError, setGlobalLoading}) =>
     };
 
     return (
-        <View style={globalStyles.container}>
-            <Text style={globalStyles.paragraph}>Please fill in your email address to get a code to change your password. </Text>
+        <View style={styles.flex1}>
+            <ErrorBanner />
+            <View style={styles.container}>
+            <Text style={styles.paragraph}>Please fill in your email address to get a code to change your password. </Text>
             <TextInput
-                style={globalStyles.input}
+                style={styles.input}
                 autoFocus={true}
                 placeholder="Enter email"
                 onChangeText={text => setEmail(text)}
@@ -25,12 +29,13 @@ const ForgotPasswordScreen = ({navigation, setGlobalError, setGlobalLoading}) =>
                 autoCapitalize="none"
             />
             <Pressable
-                style={globalStyles.button}
+                style={styles.button}
                 onPress={handlePress}
             >
-                <Text style={globalStyles.text}>Reset password</Text>
+                <Text style={[styles.text, {color: '#fff'}]}>Reset password</Text>
             </Pressable>
         </View>
+            </View>
     );
 
 };

@@ -21,9 +21,14 @@ export const refreshToken = async () => {
 
         const data = await response.json();
 
-        await saveTokens(data.token, data.refreshToken);
+        const newToken = data.token;
+        const newRefresh = data.refreshToken ?? data.refresh_token;
 
-        return data.token;
+        if (newRefresh) {
+            await saveTokens(newToken, newRefresh);
+        }
+
+        return newToken;
 
     } catch {
         return null;

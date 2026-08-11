@@ -1,7 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getToken, clearTokens } from "../services/api/authStorage";
 import jwtDecode from "jwt-decode";
-import { refreshToken } from "../components/Apicalls";
+import { refreshToken } from "../services/api/tokenService";
 import { registerForPushNotifications } from "./notificationUtils";
+
+let pushRegistered = false;
 
 /**
  * Checks stored token validity and redirects user accordingly.
@@ -14,7 +16,7 @@ export const checkToken = async (
 
     try {
 
-        const token = await AsyncStorage.getItem("token");
+        const token = await getToken();
 
         if (!token) {
             navigation.navigate("Login");
@@ -23,24 +25,25 @@ export const checkToken = async (
 
         const decoded = jwtDecode(token);
 
-        const now = Date.now().valueOf() / 1000;
+        const now = Date.now() / 1000;
         if (decoded.exp && decoded.exp < now) {
-            const newToken = await refreshToken(token);
+            const newToken = await refreshToken();
             if (newToken) {
-                await AsyncStorage.setItem("token", newToken);
-                registerForPushNotifications();
+                if (!pushRegistered) { pushRegistered = true; registerForPushNotifications(); }
                 navigation.replace("MainTabs");
             } else {
-                await AsyncStorage.removeItem("token");
+                await clearTokens();
                 navigation.navigate("Login");
             }
         } else {
             setGlobalError(null);
-            registerForPushNotifications();
+            if (!pushRegistered) { pushRegistered = true; registerForPushNotifications(); }
             navigation.replace("MainTabs");
         }
 
     } catch (error) {
+        console.error("checkToken error:", error);
+        await clearTokens().catch(() => {});
         navigation.navigate("Login");
     } finally {
         setGlobalLoading(false);

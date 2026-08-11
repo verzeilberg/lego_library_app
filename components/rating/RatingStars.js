@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { globalStyles } from "../../styles";
+import { useStyles, useTheme } from "../../styles";
 import { handleSubmitSetRating } from "../Apicalls";
 
 /**
@@ -19,6 +19,8 @@ export default function RatingStars({
                                         style,
                                         setOverallRating,
                                     }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
 
     const rateSet = async (value) => {
 
@@ -49,10 +51,10 @@ export default function RatingStars({
     };
 
     return (
-        <View style={[globalStyles.containerSlider, style]}>
+        <View style={[styles.containerSlider, style]}>
 
             {!readonly && showLabel &&
-                <Text style={globalStyles.labelSlider}>
+                <Text style={styles.labelSlider}>
                     Your Rating:
                 </Text>
             }
@@ -78,8 +80,8 @@ export default function RatingStars({
                                 size={size}
                                 color={
                                     iconName === 'star-outline'
-                                        ? '#ccc'
-                                        : '#f5b301'
+                                        ? colors.disabled
+                                        : colors.star
                                 }
                             />
                         </TouchableOpacity>

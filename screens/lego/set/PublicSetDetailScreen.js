@@ -11,7 +11,7 @@ import {
     Alert,
     Animated,
 } from 'react-native';
-import {globalStyles} from '../../../styles';
+import {useStyles} from '../../../styles';
 import Config from '../../../config/config';
 
 import {
@@ -23,10 +23,12 @@ import {useFocusEffect} from "@react-navigation/native";
 import {MaterialIcons, FontAwesome} from '@expo/vector-icons';
 import {File, Paths} from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
+import ErrorBanner from '../../../components/ui/ErrorBanner';
 
 const {width} = Dimensions.get('window');
 
 export default function PublicSetDetailScreen({route, navigation, setGlobalError, setGlobalLoading}) {
+    const styles = useStyles();
     const {item, bordId} = route.params;
 
     const flatListRef = useRef(null);
@@ -216,62 +218,65 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
     // LIST RENDER ITEMS
     // ======================
     const renderMinifigItem = useCallback(({item}) => (
-        <View style={globalStyles.listItem}>
+        <View style={styles.listItem}>
             {item?.imageUrl ? (
                 <TouchableOpacity onPress={() => openImagePreview(item.imageUrl, minifigsWithImages)}>
-                    <Image source={{uri: item.imageUrl}} style={globalStyles.image}/>
+                    <Image source={{uri: item.imageUrl}} style={styles.image}/>
                 </TouchableOpacity>
             ) : (
-                <Image source={require('../../../assets/images/no-minifig.png')} style={globalStyles.image}/>
+                <Image source={require('../../../assets/images/no-minifig.png')} style={styles.image}/>
             )}
-            <View style={globalStyles.flex1}>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Nr. </Text>{item?.id}</Text>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Name: </Text>{item?.name}</Text>
-                <Text style={[globalStyles.setText, globalStyles.setDetailQuantityText]}><Text style={globalStyles.bold}>Quantity: </Text>{item?.quantity}</Text>
+            <View style={styles.flex1}>
+                <Text style={styles.setText}><Text style={styles.bold}>Nr. </Text>{item?.id}</Text>
+                <Text style={styles.setText}><Text style={styles.bold}>Name: </Text>{item?.name}</Text>
+                <Text style={[styles.setText, styles.setDetailQuantityText]}><Text style={styles.bold}>Quantity: </Text>{item?.quantity}</Text>
             </View>
         </View>
     ), [openImagePreview, minifigsWithImages]);
 
     const renderPartItem = useCallback(({item}) => (
-        <View style={globalStyles.listItem}>
+        <View style={styles.listItem}>
             {item?.imageUrl ? (
                 <TouchableOpacity onPress={() => openImagePreview(item.imageUrl?.startsWith('http') ? item.imageUrl : Config.API_BASE_URL + item.imageUrl, sortedParts.filter(p => p.imageUrl).map(p => ({imageUrl: p.imageUrl?.startsWith('http') ? p.imageUrl : Config.API_BASE_URL + p.imageUrl, label: p.partNumber})))}>
-                    <Image source={{uri: item.imageUrl?.startsWith('http') ? item.imageUrl : Config.API_BASE_URL + item.imageUrl}} style={globalStyles.image}/>
+                    <Image source={{uri: item.imageUrl?.startsWith('http') ? item.imageUrl : Config.API_BASE_URL + item.imageUrl}} style={styles.image}/>
                 </TouchableOpacity>
             ) : null}
-            <View style={globalStyles.flex1}>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Nr. </Text>{item?.partNumber}</Text>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Title: </Text>{item?.name}</Text>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Color: </Text>{item?.colorName}</Text>
-                <Text style={[globalStyles.setText, globalStyles.setDetailQuantityText]}><Text style={globalStyles.bold}>Quantity: </Text>{item?.quantity}</Text>
+            <View style={styles.flex1}>
+                <Text style={styles.setText}><Text style={styles.bold}>Nr. </Text>{item?.partNumber}</Text>
+                <Text style={styles.setText}><Text style={styles.bold}>Title: </Text>{item?.name}</Text>
+                <Text style={styles.setText}><Text style={styles.bold}>Color: </Text>{item?.colorName}</Text>
+                <Text style={[styles.setText, styles.setDetailQuantityText]}><Text style={styles.bold}>Quantity: </Text>{item?.quantity}</Text>
             </View>
         </View>
     ), [openImagePreview, sortedParts]);
 
     if (!set) {
-        return <View style={globalStyles.setDetailLoadingContainer} />;
+        return <View style={styles.setDetailLoadingContainer} />;
     }
 
     // ======================
     // RENDER
     // ======================
     return (
-        <View style={globalStyles.flex1}>
+        <View style={styles.flex1}>
+
+            {/* Error banner */}
+            <ErrorBanner />
 
             {/* HEADER */}
-            <View style={globalStyles.header}>
-                <Text style={globalStyles.headerTitle} numberOfLines={1}>{set.name}</Text>
-                <View style={globalStyles.headerIcons}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle} numberOfLines={1}>{set.name}</Text>
+                <View style={styles.headerIcons}>
                     {slides[currentSlide]?.id === 'parts' && (
-                        <TouchableOpacity onPress={exportDefectiveCsv}>
-                            <MaterialIcons name="download" size={28} color="black"/>
+                        <TouchableOpacity style={[styles.iconButton, { borderColor: 'black' }]} onPress={exportDefectiveCsv}>
+                            <MaterialIcons name="download" size={20} color="black"/>
                         </TouchableOpacity>
                     )}
                 </View>
             </View>
 
             {/* DOTS */}
-            <View style={globalStyles.dots}>
+            <View style={styles.dots}>
                 {slides.map((slide, index) => {
                     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
                     const dotWidth = scrollX.interpolate({inputRange, outputRange: [8, 18, 8], extrapolate: 'clamp'});
@@ -279,7 +284,7 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                     return (
                         <Animated.View
                             key={slide.id}
-                            style={[globalStyles.dot, {width: dotWidth, opacity, backgroundColor: 'black'}]}
+                            style={[styles.dot, {width: dotWidth, opacity, backgroundColor: 'black'}]}
                         />
                     );
                 })}
@@ -307,11 +312,11 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                 )}
                 scrollEventThrottle={16}
                 renderItem={({item: slideItem}) => (
-                    <View style={[globalStyles.setDetailSlideContainer, {width}]}>
-                        <Text style={[globalStyles.titleSetText, globalStyles.setDetailSlideTitle]}>
+                    <View style={[styles.setDetailSlideContainer, {width}]}>
+                        <Text style={[styles.titleSetText, styles.setDetailSlideTitle]}>
                             {slideItem.title}
                         </Text>
-                        <Text style={globalStyles.setDetailSlideIntro}>
+                        <Text style={styles.setDetailSlideIntro}>
                             {slideItem.intro}
                         </Text>
 
@@ -319,7 +324,7 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                         {slideItem.id === 'details' && (
                             <>
                                 {set.images?.length > 0 && (
-                                    <View style={globalStyles.imageContainer}>
+                                    <View style={styles.imageContainer}>
                                         <Image
                                             source={{uri: Config.API_BASE_URL + set.images[currentImageIndex].path}}
                                             style={{width: width - 32, height: (width - 32) * (9 / 16)}}
@@ -327,35 +332,35 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                                         />
                                         {set.images.length > 1 && (
                                             <>
-                                                <TouchableOpacity style={[globalStyles.arrow, globalStyles.arrowLeft]} onPress={handlePrevImage} delayPressIn={0}>
+                                                <TouchableOpacity style={[styles.arrow, styles.arrowLeft]} onPress={handlePrevImage} delayPressIn={0}>
                                                     <FontAwesome name="chevron-left" size={32} color="black"/>
                                                 </TouchableOpacity>
-                                                <TouchableOpacity style={[globalStyles.arrow, globalStyles.arrowRight]} onPress={handleNextImage} delayPressIn={0}>
+                                                <TouchableOpacity style={[styles.arrow, styles.arrowRight]} onPress={handleNextImage} delayPressIn={0}>
                                                     <FontAwesome name="chevron-right" size={32} color="black"/>
                                                 </TouchableOpacity>
                                             </>
                                         )}
                                     </View>
                                 )}
-                                <View style={globalStyles.ratingRow}>
-                                    <Text style={globalStyles.setDetailRatingLabel}>Rating</Text>
+                                <View style={styles.ratingRow}>
+                                    <Text style={styles.setDetailRatingLabel}>Rating</Text>
                                     <RatingStars
                                         rating={set.rating}
                                         readonly
                                         size={20}
                                         showLabel={false}
-                                        style={globalStyles.setDetailRatingNoMargin}
+                                        style={styles.setDetailRatingNoMargin}
                                     />
                                 </View>
-                                <View style={globalStyles.divider}/>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Number: </Text>{set.number}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Theme: </Text>{set.themeName}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Year: </Text>{set.year}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Total parts: </Text>{set.numParts}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Specific parts: </Text>{set.specificParts}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Total quantity: </Text>{set.totalQuantity}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Total mini figs parts: </Text>{set.totalMiniFigsParts}</Text>
-                                <Text style={globalStyles.setText}>{set.description}</Text>
+                                <View style={styles.divider}/>
+                                <Text style={styles.setText}><Text style={styles.bold}>Number: </Text>{set.number}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Theme: </Text>{set.themeName}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Year: </Text>{set.year}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Total parts: </Text>{set.numParts}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Specific parts: </Text>{set.specificParts}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Total quantity: </Text>{set.totalQuantity}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Total mini figs parts: </Text>{set.totalMiniFigsParts}</Text>
+                                <Text style={styles.setText}>{set.description}</Text>
                             </>
                         )}
 
@@ -371,13 +376,13 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                         {/* PARTS */}
                         {slideItem.id === 'parts' && (
                             <>
-                                <View style={globalStyles.setDetailToolbar}>
+                                <View style={styles.setDetailToolbar}>
                                     <TouchableOpacity
                                         onPress={() => setSortDropdownVisible(true)}
-                                        style={[globalStyles.setDetailDropdownBtn, globalStyles.setDetailDropdownBtnSort]}
+                                        style={[styles.setDetailDropdownBtn, styles.setDetailDropdownBtnSort]}
                                     >
                                         <MaterialIcons name="sort" size={16} color="#555"/>
-                                        <Text style={[globalStyles.setDetailDropdownBtnText, globalStyles.setDetailDropdownBtnSortText]}>{currentSortLabel}</Text>
+                                        <Text style={[styles.setDetailDropdownBtnText, styles.setDetailDropdownBtnSortText]}>{currentSortLabel}</Text>
                                     </TouchableOpacity>
                                 </View>
                                 <FlatList
@@ -395,17 +400,17 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
 
             {/* Sort dropdown */}
             <Modal visible={sortDropdownVisible} transparent animationType="fade">
-                <TouchableOpacity style={globalStyles.modalOverlay} activeOpacity={1} onPress={() => setSortDropdownVisible(false)}>
-                    <View style={[globalStyles.modalContent, globalStyles.setDetailDropdownModalContent]}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortDropdownVisible(false)}>
+                    <View style={[styles.modalContent, styles.setDetailDropdownModalContent]}>
                         <TouchableOpacity
                             onPress={() => setSortDropdownVisible(false)}
-                            style={globalStyles.setDetailCloseButton}
+                            style={styles.setDetailCloseButton}
                             hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
                             activeOpacity={0.7}
                         >
-                            <Text style={globalStyles.closeButtonText}>×</Text>
+                            <Text style={styles.closeButtonText}>×</Text>
                         </TouchableOpacity>
-                        <Text style={[globalStyles.modalTitle, globalStyles.setDetailDropdownModalTitle]}>Sort by</Text>
+                        <Text style={[styles.modalTitle, styles.setDetailDropdownModalTitle]}>Sort by</Text>
                         {SORT_OPTIONS.map(option => {
                             const active = partsSort.field === option.field && partsSort.direction === option.direction;
                             return (
@@ -416,9 +421,9 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                                         setSortDropdownVisible(false);
                                         partsListRef.current?.scrollToOffset({offset: 0, animated: false});
                                     }}
-                                    style={[globalStyles.setDetailSortOption, active && globalStyles.setDetailSortOptionActive]}
+                                    style={[styles.setDetailSortOption, active && styles.setDetailSortOptionActive]}
                                 >
-                                    <Text style={active ? globalStyles.setDetailSortOptionTextBold : globalStyles.setDetailSortOptionText}>{option.label}</Text>
+                                    <Text style={active ? styles.setDetailSortOptionTextBold : styles.setDetailSortOptionText}>{option.label}</Text>
                                 </TouchableOpacity>
                             );
                         })}
@@ -428,28 +433,28 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
 
             {/* Image preview modal */}
             <Modal visible={!!imagePreviewUrl} transparent animationType="fade">
-                <View style={globalStyles.modalOverlay}>
-                    <View style={globalStyles.modalContent}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
                         <TouchableOpacity
                             onPress={() => setImagePreviewUrl(null)}
-                            style={globalStyles.setDetailCloseButton}
+                            style={styles.setDetailCloseButton}
                             hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
                             activeOpacity={0.7}
                         >
-                            <Text style={globalStyles.closeButtonText}>×</Text>
+                            <Text style={styles.closeButtonText}>×</Text>
                         </TouchableOpacity>
                         {imagePreviewSize
                             ? <Image
                                 source={{uri: imagePreviewUrl}}
-                                style={[globalStyles.setDetailPreviewImage, {width: imagePreviewSize.width, height: imagePreviewSize.height}]}
+                                style={[styles.setDetailPreviewImage, {width: imagePreviewSize.width, height: imagePreviewSize.height}]}
                                 resizeMode="contain"
                             />
-                            : <ActivityIndicator style={globalStyles.setDetailPreviewLoader}/>
+                            : <ActivityIndicator style={styles.setDetailPreviewLoader}/>
                         }
-                        <Text style={globalStyles.setDetailPreviewPartNumber}>
+                        <Text style={styles.setDetailPreviewPartNumber}>
                             {previewItemsRef.current[imagePreviewIndex]?.label}
                         </Text>
-                        <View style={globalStyles.setDetailPreviewNavRow}>
+                        <View style={styles.setDetailPreviewNavRow}>
                             <TouchableOpacity
                                 onPress={() => navigateImagePreview(-1)}
                                 disabled={imagePreviewIndex <= 0}
@@ -457,7 +462,7 @@ export default function PublicSetDetailScreen({route, navigation, setGlobalError
                             >
                                 <FontAwesome name="chevron-left" size={24} color={imagePreviewIndex <= 0 ? '#ccc' : '#333'}/>
                             </TouchableOpacity>
-                            <Text style={globalStyles.setDetailPreviewNavCounter}>
+                            <Text style={styles.setDetailPreviewNavCounter}>
                                 {imagePreviewIndex + 1} / {previewItemsRef.current.length}
                             </Text>
                             <TouchableOpacity

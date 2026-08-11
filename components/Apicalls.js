@@ -9,11 +9,12 @@ const imageFromUri = (uri) => {
     return {uri, name, type: `image/${ext}`};
 };
 
-// Authenticated fetch — automatically injects the stored Bearer token.
+// Authenticated fetch — automatically injects the stored Bearer token
+// and retries once with a refreshed token on 401.
 // Callers can override Authorization in options.headers when a different token is needed.
-const apiFetch = async (path, options = {}) => {
+export const apiFetch = async (path, options = {}, _retry = true) => {
     const token = await AsyncStorage.getItem('token');
-    return fetch(`${Config.API_BASE_URL}${path}`, {
+    const response = await fetch(`${Config.API_BASE_URL}${path}`, {
         ...options,
         headers: {
             'Accept': 'application/json',
@@ -21,6 +22,22 @@ const apiFetch = async (path, options = {}) => {
             ...options.headers,
         },
     });
+
+    if (response.status === 401 && _retry) {
+        const newToken = await refreshToken();
+        if (newToken) {
+            return fetch(`${Config.API_BASE_URL}${path}`, {
+                ...options,
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${newToken}`,
+                    ...options.headers,
+                },
+            });
+        }
+    }
+
+    return response;
 };
 
 export const savePushToken = async (pushToken) => {
@@ -44,8 +61,9 @@ export const savePushToken = async (pushToken) => {
  * @param {object} navigation
  * @param {function} setGlobalError
  */
-export const handleSubmitLogin = async (email, password, navigation, setGlobalError) => {
+export const handleSubmitLogin = async (email, password, navigation, setGlobalError, setGlobalLoading) => {
     try {
+        if (setGlobalLoading) setGlobalLoading(true);
         const response = await apiFetch('/api/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -62,6 +80,8 @@ export const handleSubmitLogin = async (email, password, navigation, setGlobalEr
         }
     } catch (error) {
         setGlobalError('Error logging in: ' + error.message);
+    } finally {
+        if (setGlobalLoading) setGlobalLoading(false);
     }
 };
 
@@ -111,7 +131,7 @@ export const handleSubmitRegistration = async (firstname, lastname, email, passw
  * @param {function} setGlobalLoading
  */
 export const handleCodeSubmit = async (code, navigation, setGlobalError, setGlobalLoading) => {
-    if (!code.some(value => value.trim() !== "")) {
+    if (!code.every(value => value.trim() !== "")) {
         setGlobalError('Code must be 4 digits');
         return;
     }
@@ -217,7 +237,7 @@ export const handleForgotPasswordSubmit = async (email, setGlobalError, setGloba
  * @param {function} setGlobalLoading
  */
 export const handleForgotPasswordCodeSubmit = async (code, setGlobalError, navigation, setGlobalLoading) => {
-    if (!code.some(value => value.trim() !== "")) {
+    if (!code.every(value => value.trim() !== "")) {
         setGlobalError('Code must be 4 digits');
         setGlobalLoading(false);
         return;
@@ -324,12 +344,14 @@ export const handleSubmitAddSet = async (
 
         const result = await response.json();
         if (!response.ok) {
+            setModalVisible(false);
             setGlobalError('Adding set unsuccessful: ' + result.message);
         } else {
             onDataUpdated();
             setModalVisible(false);
         }
     } catch (error) {
+        setModalVisible(false);
         setGlobalError('Error adding set: \n' + error.message);
     } finally {
         setGlobalLoading(false);
@@ -380,8 +402,8 @@ export const handleSubmitDeleteSetFromSetList = async (setId, bordId, setGlobalE
                     method: 'DELETE',
                 });
 
-                const result = await response.json();
                 if (!response.ok) {
+                    const result = response.status !== 204 ? await response.json().catch(() => ({})) : {};
                     setGlobalError(result?.message || 'Deleting set from set list unsuccessful');
                     return;
                 }
@@ -473,8 +495,8 @@ export const handleSubmitEditProfile = async (
 export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError, navigation) => {
     try {
         const response = await apiFetch('/api/user-data/delete', {method: 'DELETE'});
-        const result = await response.json();
         if (!response.ok) {
+            const result = response.status !== 204 ? await response.json().catch(() => ({})) : {};
             setGlobalError('Delete profile unsuccessful: ' + result.message);
         } else {
             await AsyncStorage.removeItem('token');
@@ -492,17 +514,21 @@ export const handleSubmitDeleteProfile = async (setGlobalLoading, setGlobalError
 
 /**
  * Reloads board data from the API and updates the board state.
+ * Paginated: returns up to `limit` child lists/sets for the given page.
  *
  * @param {string} id
- * @param {function} setGlobalLoading
+ * @param {function} setLoading
  * @param {function} setBord
  * @param {function} setGlobalError
+ * @param {number} [page=1]
+ * @param {number} [limit=10]
+ * @param {string} [query='']
  */
-export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError, query = '') => {
+export const reloadData = async (id, setLoading, setBord, setGlobalError, page = 1, limit = 10, query = '') => {
     try {
-        setGlobalLoading(true);
-        const q = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : '';
-        const response = await apiFetch(`/api/set-lists/${id}${q}`, {
+        setLoading(true);
+        const q = query.trim() ? `&q=${encodeURIComponent(query.trim())}` : '';
+        const response = await apiFetch(`/api/set-lists/${id}?page=${page}&limit=${limit}${q}`, {
             headers: {'Content-Type': 'application/json'},
         });
 
@@ -515,7 +541,7 @@ export const reloadData = async (id, setGlobalLoading, setBord, setGlobalError, 
     } catch (err) {
         setGlobalError(err.message || 'Error fetching bord');
     } finally {
-        setGlobalLoading(false);
+        setLoading(false);
     }
 };
 
@@ -534,14 +560,14 @@ export const handleSubmitDeleteBord = (bordId, setGlobalLoading, navigation, set
             try {
                 setGlobalLoading(true);
                 const response = await apiFetch(`/api/set-list/delete/${bordId}`, {method: 'DELETE'});
-                const result = await response.json();
                 if (!response.ok) {
+                    const result = response.status !== 204 ? await response.json().catch(() => ({})) : {};
                     setGlobalError(`Delete unsuccessful: ${result?.message || 'Failed to delete bord.'}`);
                     return;
                 }
 
                 Alert.alert('Bord Deleted', 'The bord has been successfully deleted.', [{
-                    text: 'OK', onPress: () => navigation.navigate('MainTabs', {screen: 'Borden'}),
+                    text: 'OK', onPress: () => navigation.goBack(),
                 }], {cancelable: false});
             } catch (error) {
                 setGlobalError('Error deleting bord:\n' + error.message);
@@ -562,7 +588,7 @@ export const refreshToken = async () => {
         const refresh = await AsyncStorage.getItem("refresh_token");
         if (!refresh) return null;
 
-        const response = await apiFetch('/api/token/refresh', {
+        const response = await fetch(`${Config.API_BASE_URL}/api/token/refresh`, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({refreshToken: refresh}),
@@ -572,7 +598,10 @@ export const refreshToken = async () => {
 
         const data = await response.json();
         await AsyncStorage.setItem("token", data.token);
-        await AsyncStorage.setItem("refresh_token", data.refreshToken);
+        const newRefresh = data.refreshToken ?? data.refresh_token;
+        if (newRefresh) {
+            await AsyncStorage.setItem("refresh_token", newRefresh);
+        }
         return data.token;
     } catch (e) {
         console.error("Error refreshing token", e);
@@ -598,8 +627,10 @@ export const logout = async (logoutAll = false, navigation, setGlobalError, setG
             body: JSON.stringify({refreshToken: refresh, allDevices: logoutAll}),
         });
 
-        const data = await response.json();
         if (!response.ok) {
+            const data = response.headers.get('content-type')?.includes('json')
+                ? await response.json().catch(() => ({}))
+                : {};
             const errorMessage = typeof data === "string" ? data : data.message || JSON.stringify(data);
             setGlobalError(errorMessage);
         }
@@ -610,6 +641,70 @@ export const logout = async (logoutAll = false, navigation, setGlobalError, setG
         await AsyncStorage.removeItem("refresh_token");
         setGlobalLoading(false);
         navigation.navigate('Login');
+    }
+};
+
+/**
+ * Moves a board to a different parent board.
+ * Only works for boards that are not top-level (have a parent).
+ *
+ * @param {string} bordId
+ * @param {string} targetParentId
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {function} onSuccess
+ */
+export const handleMoveBord = async (bordId, targetParentId, setGlobalError, setGlobalLoading, onSuccess) => {
+    try {
+        setGlobalLoading(true);
+        const response = await apiFetch(`/api/set-list/${bordId}/move`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({targetParentId}),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            setGlobalError('Move board unsuccessful: ' + (result.message || 'Unknown error'));
+        } else {
+            if (onSuccess) onSuccess();
+        }
+    } catch (error) {
+        setGlobalError('Error moving board: ' + error.message);
+    } finally {
+        setGlobalLoading(false);
+    }
+};
+
+/**
+ * Moves a set from one board to another.
+ *
+ * @param {string} bordId - The source board ID
+ * @param {string} setNumber - The set number to move
+ * @param {string} targetListId - The target board ID
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {function} onSuccess
+ */
+export const handleMoveSet = async (bordId, setNumber, targetListId, setGlobalError, setGlobalLoading, onSuccess) => {
+    try {
+        setGlobalLoading(true);
+        const response = await apiFetch(`/api/lego/set-list/${bordId}/set/${setNumber}/move`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({targetListId}),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            setGlobalError('Move set unsuccessful: ' + (result.message || 'Unknown error'));
+        } else {
+            if (onSuccess) onSuccess();
+        }
+    } catch (error) {
+        setGlobalError('Error moving set: ' + error.message);
+    } finally {
+        setGlobalLoading(false);
     }
 };
 
@@ -817,9 +912,37 @@ export const fetchSetListById = async (id, setGlobalError) => {
     }
 };
 
-export const fetchModelLists = async (setData, setGlobalError, setGlobalLoading) => {
+export const fetchModelLists = async (setData, setGlobalError, setLoading, page = 1, limit = 10) => {
     try {
-        const response = await apiFetch('/api/set-lists-for-user', {
+        const response = await apiFetch(`/api/set-lists-for-user?page=${page}&limit=${limit}`, {
+            headers: {'Content-Type': 'application/json'},
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        setData(await response.json());
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong!');
+    } finally {
+        setLoading(false);
+    }
+};
+
+/**
+ * Searches the current user's boards by title, description, or set name/number.
+ *
+ * @param {string} query
+ * @param {function} setData
+ * @param {function} setGlobalError
+ * @param {function} setGlobalLoading
+ * @param {number} [page=1]
+ * @param {number} [limit=50]
+ */
+export const searchUserSetLists = async (query, setData, setGlobalError, setGlobalLoading, page = 1, limit = 50) => {
+    try {
+        const response = await apiFetch(`/api/set-lists-user-search?page=${page}&limit=${limit}&q=${encodeURIComponent(query.trim())}`, {
             headers: {'Content-Type': 'application/json'},
         });
 
@@ -908,6 +1031,36 @@ export const updateNotificationPreferences = async (prefs, setGlobalError) => {
     }
 };
 
+export const shareBoardWithUser = async (boardId, userId, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/set-list/${boardId}/share/${userId}`, {method: 'POST'});
+        const result = await response.json();
+        if (!response.ok) {
+            setGlobalError(result.message || 'Could not share board');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+        return false;
+    }
+};
+
+export const unshareBoard = async (boardId, userId, setGlobalError) => {
+    try {
+        const response = await apiFetch(`/api/set-list/${boardId}/unshare/${userId}`, {method: 'POST'});
+        const result = await response.json();
+        if (!response.ok) {
+            setGlobalError(result.message || 'Could not unshare board');
+            return false;
+        }
+        return true;
+    } catch (error) {
+        setGlobalError(error.message || 'Something went wrong');
+        return false;
+    }
+};
+
 export const fetchFriends = async (setData, setGlobalError, setGlobalLoading) => {
     try {
         const response = await apiFetch('/api/friends');
@@ -928,7 +1081,9 @@ export const fetchFriendshipStatus = async (userId, setStatus, setGlobalError) =
         const response = await apiFetch(`/api/friends/status/${userId}`);
         if (!response.ok) return;
         setStatus(await response.json());
-    } catch (_) {}
+    } catch (error) {
+        console.warn("fetchFriendshipStatus failed:", error.message);
+    }
 };
 
 export const sendFriendRequest = async (userId, setGlobalError) => {

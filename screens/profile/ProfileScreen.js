@@ -2,10 +2,11 @@ import React, {useState, useCallback, useLayoutEffect} from 'react';
 import {useFocusEffect} from '@react-navigation/native';
 import {View, Text, Image, TouchableOpacity, ScrollView, Modal} from 'react-native';
 import Config from '../../config/config';
-import {globalStyles} from '../../styles';
+import {useStyles} from '../../styles';
 import {fetchData} from '../../components/Apicalls';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import ErrorBanner from '../../components/ui/ErrorBanner';
 
 const PROFILE_IMAGES = {
     vrouw: require('../../assets/images/minifigure-portrait-female.png'),
@@ -17,6 +18,7 @@ const defaultImageForGeslacht = (geslacht) =>
     PROFILE_IMAGES[geslacht] ?? PROFILE_IMAGES.default;
 
 const ProfileScreen = ({navigation, setGlobalLoading, setGlobalError}) => {
+    const styles = useStyles();
     const [data, setData] = useState(null);
     const [showImagePreview, setShowImagePreview] = useState(false);
 
@@ -51,12 +53,14 @@ const ProfileScreen = ({navigation, setGlobalLoading, setGlobalError}) => {
         geslacht ? 'Geslacht neutraal' : null;
 
     return (
-        <ScrollView contentContainerStyle={[globalStyles.container, {paddingBottom: 60}]}>
-            <View style={globalStyles.container}>
+        <View style={styles.flex1}>
+            <ErrorBanner />
+            <ScrollView contentContainerStyle={[styles.container, {paddingBottom: 60}]}>
+            <View style={styles.container}>
                 <TouchableOpacity onPress={() => profilePicture && setShowImagePreview(true)}>
                     <Image
                         source={displayImageSource}
-                        style={globalStyles.imageRoundContainer}
+                        style={styles.imageRoundContainer}
                         resizeMode="cover"
                     />
                 </TouchableOpacity>
@@ -64,19 +68,20 @@ const ProfileScreen = ({navigation, setGlobalLoading, setGlobalError}) => {
 
             <Modal visible={showImagePreview && !!profilePicture} transparent animationType="fade">
                 <TouchableOpacity
-                    style={globalStyles.imagePreviewOverlay}
+                    style={styles.imagePreviewOverlay}
                     activeOpacity={1}
                     onPress={() => setShowImagePreview(false)}
                 >
-                    <Image source={{uri: profilePicture}} style={globalStyles.imagePreviewImage} resizeMode="contain"/>
+                    <Image source={{uri: profilePicture}} style={styles.imagePreviewImage} resizeMode="contain"/>
                 </TouchableOpacity>
             </Modal>
 
-            <Text style={globalStyles.nameText}>{data.userName}</Text>
-            <Text style={globalStyles.nameText}>{data.firstName} {data.lastName}</Text>
-            {data.bio ? <Text style={globalStyles.emailText}>{data.bio}</Text> : null}
-            {geslachtLabel ? <Text style={globalStyles.emailText}>{geslachtLabel}</Text> : null}
-        </ScrollView>
+            <Text style={styles.nameText}>{data.userName}</Text>
+            <Text style={styles.nameText}>{data.firstName} {data.lastName}</Text>
+            {data.bio ? <Text style={styles.emailText}>{data.bio}</Text> : null}
+            {geslachtLabel ? <Text style={styles.emailText}>{geslachtLabel}</Text> : null}
+            </ScrollView>
+        </View>
     );
 };
 

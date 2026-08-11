@@ -11,27 +11,49 @@ import {
     Alert,
     Animated,
 } from 'react-native';
-import {globalStyles} from '../../../styles';
+import {useStyles, useTheme} from '../../../styles';
 import Config from '../../../config/config';
 
 import {
     handleSubmitGetSet,
     handleSubmitDeleteSetFromSetList,
+    handleMoveSet,
     savePartState,
     deleteSetImage,
 } from "../../../components/Apicalls";
 
 import {selectMultipleImage} from "../../../components/Functions";
+import MoveModal from "../../../components/modals/MoveModal";
 import RatingStars from "../../../components/rating/RatingStars";
 import {useFocusEffect} from "@react-navigation/native";
 import {MaterialIcons, FontAwesome} from '@expo/vector-icons';
-import {File, Paths} from 'expo-file-system/next';
-import * as FileSystem from 'expo-file-system';
+import {File, Paths} from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as XLSX from 'xlsx';
+import ErrorBanner from '../../../components/ui/ErrorBanner';
 
 const {width} = Dimensions.get('window');
 
+const FILTER_OPTIONS = [
+    {key: 'missingQuantity', label: 'Missing'},
+    {key: 'damagedQuantity', label: 'Broken'},
+    {key: 'discolouredQuantity', label: 'Discoloured'},
+];
+
+const SORT_OPTIONS = [
+    {field: 'partNumber', direction: 'asc', label: 'Nr. (Low → High)'},
+    {field: 'partNumber', direction: 'desc', label: 'Nr. (High → Low)'},
+    {field: 'name', direction: 'asc', label: 'Title (A → Z)'},
+    {field: 'name', direction: 'desc', label: 'Title (Z → A)'},
+    {field: 'colorName', direction: 'asc', label: 'Color (A → Z)'},
+    {field: 'colorName', direction: 'desc', label: 'Color (Z → A)'},
+    {field: 'quantity', direction: 'asc', label: 'Quantity (Low → High)'},
+    {field: 'quantity', direction: 'desc', label: 'Quantity (High → Low)'},
+];
+
 export default function SetDetailScreen({route, navigation, setGlobalError, setGlobalLoading}) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const {item, bordId} = route.params;
 
     const flatListRef = useRef(null);
@@ -48,35 +70,18 @@ export default function SetDetailScreen({route, navigation, setGlobalError, setG
     // Parts filter state
     const [partsFilter, setPartsFilter] = useState([]);
 
-    const togglePartsFilter = (key) => {
+    const togglePartsFilter = useCallback((key) => {
         setPartsFilter(prev =>
             prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
         );
-    };
+    }, []);
 
     // Parts sort state
     const [partsSort, setPartsSort] = useState({field: 'partNumber', direction: 'asc'});
     const [sortDropdownVisible, setSortDropdownVisible] = useState(false);
     const [filterDropdownVisible, setFilterDropdownVisible] = useState(false);
 
-    const FILTER_OPTIONS = [
-        {key: 'missingQuantity', label: 'Missing'},
-        {key: 'damagedQuantity', label: 'Broken'},
-        {key: 'discolouredQuantity', label: 'Discoloured'},
-    ];
-
     const filterLabel = 'Filter';
-
-    const SORT_OPTIONS = [
-        {field: 'partNumber', direction: 'asc', label: 'Nr. (Low → High)'},
-        {field: 'partNumber', direction: 'desc', label: 'Nr. (High → Low)'},
-        {field: 'name', direction: 'asc', label: 'Title (A → Z)'},
-        {field: 'name', direction: 'desc', label: 'Title (Z → A)'},
-        {field: 'colorName', direction: 'asc', label: 'Color (A → Z)'},
-        {field: 'colorName', direction: 'desc', label: 'Color (Z → A)'},
-        {field: 'quantity', direction: 'asc', label: 'Quantity (Low → High)'},
-        {field: 'quantity', direction: 'desc', label: 'Quantity (High → Low)'},
-    ];
 
     const currentSortLabel = SORT_OPTIONS.find(o => o.field === partsSort.field && o.direction === partsSort.direction)?.label ?? 'Sort';
 
@@ -84,6 +89,14 @@ export default function SetDetailScreen({route, navigation, setGlobalError, setG
     const [selectedPart, setSelectedPart] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [savingPart, setSavingPart] = useState(false);
+
+    const [moveModalVisible, setMoveModalVisible] = useState(false);
+
+    const handleMoveSetToBoard = useCallback((targetListId) => {
+        handleMoveSet(bordId, set.number, targetListId, setGlobalError, setGlobalLoading, () => {
+            navigation.goBack();
+        });
+    }, [bordId, set, setGlobalError, setGlobalLoading, navigation]);
 
     // Image preview modal
     const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
@@ -232,49 +245,54 @@ export default function SetDetailScreen({route, navigation, setGlobalError, setG
         }
         try {
             setGlobalLoading(true);
-            const rowsHtml = await Promise.all(missingParts.map(async (p) => {
-                let imgHtml = '';
-                if (p.imageUrl) {
-                    const imageUrl = p.imageUrl.startsWith('http')
-                        ? p.imageUrl
-                        : `${Config.API_BASE_URL}${p.imageUrl}`;
-                    try {
-                        const localUri = `${FileSystem.cacheDirectory}part-${p.partNumber}.jpg`;
-                        await FileSystem.downloadAsync(imageUrl, localUri);
-                        const base64 = await FileSystem.readAsStringAsync(localUri, {encoding: FileSystem.EncodingType.Base64});
-                        imgHtml = `<img src="data:image/jpeg;base64,${base64}" width="60" height="60" />`;
-                    } catch (_) {}
+
+            const headers = ['Image', 'Part Nr.', 'Name', 'Color', 'Quantity', 'Missing', 'Broken', 'Discoloured'];
+            const rows = missingParts.map(p => [
+                '',
+                p.partNumber || '',
+                p.name || '',
+                p.colorName || '',
+                p.quantity || 0,
+                p.missingQuantity || 0,
+                p.damagedQuantity || 0,
+                p.discolouredQuantity || 0,
+            ]);
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+            missingParts.forEach((p, i) => {
+                if (p.imageUrl && p.imageUrl.startsWith('http')) {
+                    const cellRef = XLSX.utils.encode_cell({r: i + 1, c: 0});
+                    ws[cellRef] = {f: `IMAGE("${p.imageUrl}")`};
                 }
-                const safe = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                return `<tr>
-                    <td>${imgHtml}</td>
-                    <td>${p.partNumber || ''}</td>
-                    <td>${safe(p.name)}</td>
-                    <td>${safe(p.colorName)}</td>
-                    <td>${p.quantity || 0}</td>
-                    <td>${p.missingQuantity || 0}</td>
-                    <td>${p.damagedQuantity || 0}</td>
-                    <td>${p.discolouredQuantity || 0}</td>
-                </tr>`;
-            }));
+            });
 
-            const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-<head><meta charset="UTF-8"><style>
-table{border-collapse:collapse}
-th{background:#1f65ff;color:#fff;padding:8px;border:1px solid #ccc;white-space:nowrap}
-td{padding:6px;border:1px solid #ccc;vertical-align:middle}
-</style></head>
-<body><table>
-<thead><tr>
-<th>Image</th><th>Part Nr.</th><th>Name</th><th>Color</th>
-<th>Quantity</th><th>Missing</th><th>Broken</th><th>Discoloured</th>
-</tr></thead>
-<tbody>${rowsHtml.join('')}</tbody>
-</table></body></html>`;
+            ws['!cols'] = [
+                {wch: 15},
+                {wch: 12},
+                {wch: 30},
+                {wch: 20},
+                {wch: 10},
+                {wch: 10},
+                {wch: 10},
+                {wch: 15},
+            ];
+            ws['!rows'] = [
+                {hpt: 20},
+                ...missingParts.map(() => ({hpt: 60})),
+            ];
 
-            const file = new File(Paths.cache, `${set.number}-missing-parts.xls`);
-            file.write(html);
-            await Sharing.shareAsync(file.uri, {mimeType: 'application/vnd.ms-excel', dialogTitle: 'Export missing parts'});
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Missing Parts');
+
+            const xlsxBytes = XLSX.write(wb, {type: 'array', bookType: 'xlsx'});
+            const file = new File(Paths.cache, `${set.number}-missing-parts.xlsx`);
+            file.write(new Uint8Array(xlsxBytes));
+
+            await Sharing.shareAsync(file.uri, {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                dialogTitle: 'Export missing parts',
+            });
         } catch (err) {
             Alert.alert('Export failed', err.message);
         } finally {
@@ -358,13 +376,13 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
     // ======================
     // IMAGE NAVIGATION
     // ======================
-    const handlePrevImage = () => setCurrentImageIndex(prev =>
+    const handlePrevImage = useCallback(() => setCurrentImageIndex(prev =>
         prev === 0 ? (set?.images.length ?? 1) - 1 : prev - 1
-    );
+    ), [set?.images.length]);
 
-    const handleNextImage = () => setCurrentImageIndex(prev =>
+    const handleNextImage = useCallback(() => setCurrentImageIndex(prev =>
         (prev + 1) % (set?.images.length ?? 1)
-    );
+    ), [set?.images.length]);
 
     // ======================
     // LIST RENDER ITEMS
@@ -377,46 +395,46 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
     );
 
     const renderMinifigItem = useCallback(({item}) => (
-        <View style={globalStyles.listItem}>
+        <View style={styles.listItem}>
             {item?.imageUrl ? (
                 <TouchableOpacity onPress={() => openImagePreview(item.imageUrl, minifigsWithImages)}>
-                    <Image source={{uri: item.imageUrl}} style={globalStyles.image}/>
+                    <Image source={{uri: item.imageUrl}} style={styles.image}/>
                 </TouchableOpacity>
             ) : (
-                <Image source={require('../../../assets/images/no-minifig.png')} style={globalStyles.image}/>
+                <Image source={require('../../../assets/images/no-minifig.png')} style={styles.image}/>
             )}
-            <View style={globalStyles.flex1}>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Nr. </Text>{item?.id}</Text>
-                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Name: </Text>{item?.name}</Text>
-                <Text style={[globalStyles.setText, globalStyles.setDetailQuantityText]}><Text style={globalStyles.bold}>Quantity: </Text>{item?.quantity}</Text>
+            <View style={styles.flex1}>
+                <Text style={styles.setText}><Text style={styles.bold}>Nr. </Text>{item?.id}</Text>
+                <Text style={styles.setText}><Text style={styles.bold}>Name: </Text>{item?.name}</Text>
+                <Text style={[styles.setText, styles.setDetailQuantityText]}><Text style={styles.bold}>Quantity: </Text>{item?.quantity}</Text>
             </View>
         </View>
     ), [openImagePreview, minifigsWithImages]);
 
     const renderPartItem = useCallback(({item}) => (
-        <View style={globalStyles.listItem}>
+        <View style={styles.listItem}>
             {item?.imageUrl ? (
                 <TouchableOpacity onPress={() => openImagePreview(item.imageUrl?.startsWith('http') ? item.imageUrl : Config.API_BASE_URL + item.imageUrl)}>
-                    <Image source={{uri: item.imageUrl?.startsWith('http') ? item.imageUrl : Config.API_BASE_URL + item.imageUrl}} style={globalStyles.image}/>
+                    <Image source={{uri: item.imageUrl?.startsWith('http') ? item.imageUrl : Config.API_BASE_URL + item.imageUrl}} style={styles.image}/>
                 </TouchableOpacity>
             ) : null}
-            <TouchableOpacity style={globalStyles.flex1} onPress={() => {
+            <TouchableOpacity style={styles.flex1} onPress={() => {
                 setSelectedPart(item);
                 setModalVisible(true);
             }}>
-                <View style={globalStyles.flex1}>
-                    <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Nr. </Text>{item?.partNumber}</Text>
-                    <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Title: </Text>{item?.name}</Text>
-                    <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Color: </Text>{item?.colorName}</Text>
-                    <Text style={[globalStyles.setText, globalStyles.setDetailQuantityText]}><Text style={globalStyles.bold}>Quantity: </Text>{item?.quantity}</Text>
+                <View style={styles.flex1}>
+                    <Text style={styles.setText}><Text style={styles.bold}>Nr. </Text>{item?.partNumber}</Text>
+                    <Text style={styles.setText}><Text style={styles.bold}>Title: </Text>{item?.name}</Text>
+                    <Text style={styles.setText}><Text style={styles.bold}>Color: </Text>{item?.colorName}</Text>
+                    <Text style={[styles.setText, styles.setDetailQuantityText]}><Text style={styles.bold}>Quantity: </Text>{item?.quantity}</Text>
                     {(item?.missingQuantity || 0) > 0 && (
-                        <Text style={[globalStyles.setText, globalStyles.textMissing]}><Text style={globalStyles.bold}>Missing: </Text>{item.missingQuantity}</Text>
+                        <Text style={[styles.setText, styles.textMissing]}><Text style={styles.bold}>Missing: </Text>{item.missingQuantity}</Text>
                     )}
                     {(item?.damagedQuantity || 0) > 0 && (
-                        <Text style={[globalStyles.setText, globalStyles.textBroken]}><Text style={globalStyles.bold}>Broken: </Text>{item.damagedQuantity}</Text>
+                        <Text style={[styles.setText, styles.textBroken]}><Text style={styles.bold}>Broken: </Text>{item.damagedQuantity}</Text>
                     )}
                     {(item?.discolouredQuantity || 0) > 0 && (
-                        <Text style={[globalStyles.setText, globalStyles.textDiscoloured]}><Text style={globalStyles.bold}>Discoloured: </Text>{item.discolouredQuantity}</Text>
+                        <Text style={[styles.setText, styles.textDiscoloured]}><Text style={styles.bold}>Discoloured: </Text>{item.discolouredQuantity}</Text>
                     )}
                 </View>
             </TouchableOpacity>
@@ -458,30 +476,36 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
     }, [imagePreviewIndex, loadImageSize]);
 
     if (!set) {
-        return <View style={globalStyles.setDetailLoadingContainer} />;
+        return <View style={styles.setDetailLoadingContainer} />;
     }
 
     // ======================
     // RENDER
     // ======================
     return (
-        <View style={globalStyles.flex1}>
+        <View style={styles.flex1}>
+            {/* Error banner */}
+            <ErrorBanner />
 
             {/* HEADER */}
-            <View style={globalStyles.header}>
-                <Text style={globalStyles.headerTitle} numberOfLines={1}>{set.name}</Text>
-                <View style={globalStyles.headerIcons}>
+            <View style={styles.header}>
+                <Text style={styles.headerTitle} numberOfLines={1}>{set.name}</Text>
+                <View style={styles.headerIcons}>
                     {slides[currentSlide]?.id === 'parts' && (
-                        <TouchableOpacity onPress={handleExport}>
-                            <MaterialIcons name="download" size={28} color="black"/>
+                        <TouchableOpacity style={[styles.iconButton, { borderColor: 'black' }]} onPress={handleExport}>
+                            <MaterialIcons name="download" size={20} color="black"/>
                         </TouchableOpacity>
                     )}
                     {slides[currentSlide]?.id === 'details' && (
-                        <TouchableOpacity onPress={handleAddImages}>
-                            <MaterialIcons name="add-photo-alternate" size={28} color="green"/>
+                        <TouchableOpacity style={[styles.iconButton, { borderColor: 'green' }]} onPress={handleAddImages}>
+                            <MaterialIcons name="add-photo-alternate" size={20} color="green"/>
                         </TouchableOpacity>
                     )}
+                    <TouchableOpacity style={[styles.iconButton, { borderColor: 'orange' }]} onPress={() => setMoveModalVisible(true)}>
+                        <MaterialIcons name="drive-file-move" size={20} color="orange"/>
+                    </TouchableOpacity>
                     <TouchableOpacity
+                        style={[styles.iconButton, { borderColor: 'red' }]}
                         onPress={() => handleSubmitDeleteSetFromSetList(
                             set.number,
                             bordId,
@@ -490,21 +514,26 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                             navigation
                         )}
                     >
-                        <MaterialIcons name="delete" size={28} color="red"/>
+                        <MaterialIcons name="delete" size={20} color="red"/>
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* DOTS */}
-            <View style={globalStyles.dots}>
+            <View style={styles.dots}>
                 {slides.map((slide, index) => {
                     const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-                    const dotWidth = scrollX.interpolate({inputRange, outputRange: [8, 18, 8], extrapolate: 'clamp'});
-                    const opacity = scrollX.interpolate({inputRange, outputRange: [0.3, 1, 0.3], extrapolate: 'clamp'});
                     return (
                         <Animated.View
                             key={slide.id}
-                            style={[globalStyles.dot, {width: dotWidth, opacity, backgroundColor: 'black'}]}
+                            style={[
+                                styles.dot,
+                                {
+                                    width: scrollX.interpolate({inputRange, outputRange: [8, 18, 8], extrapolate: 'clamp'}),
+                                    opacity: scrollX.interpolate({inputRange, outputRange: [0.3, 1, 0.3], extrapolate: 'clamp'}),
+                                    backgroundColor: 'black',
+                                },
+                            ]}
                         />
                     );
                 })}
@@ -532,11 +561,11 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                 )}
                 scrollEventThrottle={16}
                 renderItem={({item: slideItem}) => (
-                    <View style={[globalStyles.setDetailSlideContainer, {width}]}>
-                        <Text style={[globalStyles.titleSetText, globalStyles.setDetailSlideTitle]}>
+                    <View style={[styles.setDetailSlideContainer, {width}]}>
+                        <Text style={[styles.titleSetText, styles.setDetailSlideTitle]}>
                             {slideItem.title}
                         </Text>
-                        <Text style={globalStyles.setDetailSlideIntro}>
+                        <Text style={styles.setDetailSlideIntro}>
                             {slideItem.intro}
                         </Text>
 
@@ -544,7 +573,7 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                         {slideItem.id === 'details' && (
                             <>
                                 {set.images?.length > 0 && (
-                                    <View style={globalStyles.imageContainer}>
+                                    <View style={styles.imageContainer}>
                                         <Image
                                             source={{uri: Config.API_BASE_URL + set.images[currentImageIndex].path}}
                                             style={{width: width - 32, height: (width - 32) * (9 / 16)}}
@@ -552,7 +581,7 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                                         />
                                         {set.images[currentImageIndex].id !== null && (
                                             <TouchableOpacity
-                                                style={globalStyles.imageDeleteIcon}
+                                                style={styles.imageDeleteIcon}
                                                 onPress={async () => {
                                                     const imgId = set.images[currentImageIndex].id;
                                                     const ok = await deleteSetImage(imgId, setGlobalError);
@@ -570,34 +599,34 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                                         )}
                                         {set.images.length > 1 && (
                                             <>
-                                                <TouchableOpacity style={[globalStyles.arrow, globalStyles.arrowLeft]} onPress={handlePrevImage} delayPressIn={0}>
+                                                <TouchableOpacity style={[styles.arrow, styles.arrowLeft]} onPress={handlePrevImage} delayPressIn={0}>
                                                     <FontAwesome name="chevron-left" size={32} color="black"/>
                                                 </TouchableOpacity>
-                                                <TouchableOpacity style={[globalStyles.arrow, globalStyles.arrowRight]} onPress={handleNextImage} delayPressIn={0}>
+                                                <TouchableOpacity style={[styles.arrow, styles.arrowRight]} onPress={handleNextImage} delayPressIn={0}>
                                                     <FontAwesome name="chevron-right" size={32} color="black"/>
                                                 </TouchableOpacity>
                                             </>
                                         )}
                                     </View>
                                 )}
-                                <View style={globalStyles.ratingRow}>
-                                    <Text style={globalStyles.setDetailRatingLabel}>Rating</Text>
+                                <View style={styles.ratingRow}>
+                                    <Text style={styles.setDetailRatingLabel}>Rating</Text>
                                     <RatingStars
                                         rating={set.rating}
                                         readonly
                                         size={20}
                                         showLabel={false}
-                                        style={globalStyles.setDetailRatingNoMargin}
+                                        style={styles.setDetailRatingNoMargin}
                                     />
                                 </View>
-                                <View style={globalStyles.divider}/>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Number: </Text>{set.number}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Theme: </Text>{set.themeName}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Year: </Text>{set.year}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Total parts: </Text>{set.numParts}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Specific parts: </Text>{set.specificParts}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Total quantity: </Text>{set.totalQuantity}</Text>
-                                <Text style={globalStyles.setText}><Text style={globalStyles.bold}>Total mini figs parts: </Text>{set.totalMiniFigsParts}</Text>
+                                <View style={styles.divider}/>
+                                <Text style={styles.setText}><Text style={styles.bold}>Number: </Text>{set.number}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Theme: </Text>{set.themeName}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Year: </Text>{set.year}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Total parts: </Text>{set.numParts}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Specific parts: </Text>{set.specificParts}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Total quantity: </Text>{set.totalQuantity}</Text>
+                                <Text style={styles.setText}><Text style={styles.bold}>Total mini figs parts: </Text>{set.totalMiniFigsParts}</Text>
                                 <RatingStars
                                     rating={set.personalRating}
                                     onChange={(val) => setSet(prev => ({...prev, personalRating: val}))}
@@ -606,29 +635,29 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                                     setGlobalError={setGlobalError}
                                     setOverallRating={(val) => setSet(prev => ({...prev, rating: val}))}
                                 />
-                                <View style={globalStyles.inputContainer}>
-                                    <Text style={globalStyles.setText}>
-                                        <Text style={globalStyles.bold}>Complete: </Text>
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.setText}>
+                                        <Text style={styles.bold}>Complete: </Text>
                                     </Text>
                                     <MaterialIcons
                                         name={set.isComplete && !hasDefectiveParts ? 'check-circle' : 'cancel'}
                                         size={20}
                                         color={set.isComplete && !hasDefectiveParts ? 'green' : 'red'}
-                                        style={globalStyles.setDetailStatusIcon}
+                                        style={styles.setDetailStatusIcon}
                                     />
                                 </View>
-                                <View style={globalStyles.inputContainer}>
-                                    <Text style={globalStyles.setText}>
-                                        <Text style={globalStyles.bold}>Instructions: </Text>
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.setText}>
+                                        <Text style={styles.bold}>Instructions: </Text>
                                     </Text>
                                     <MaterialIcons
                                         name={set.hasInstructions ? 'check-circle' : 'cancel'}
                                         size={20}
                                         color={set.hasInstructions ? 'green' : 'red'}
-                                        style={globalStyles.setDetailStatusIcon}
+                                        style={styles.setDetailStatusIcon}
                                     />
                                 </View>
-                                <Text style={globalStyles.setText}>{set.description}</Text>
+                                <Text style={styles.setText}>{set.description}</Text>
                             </>
                         )}
 
@@ -644,20 +673,20 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                         {/* PARTS */}
                         {slideItem.id === 'parts' && (
                             <>
-                                <View style={globalStyles.setDetailToolbar}>
+                                <View style={styles.setDetailToolbar}>
                                     <TouchableOpacity
                                         onPress={() => setFilterDropdownVisible(true)}
-                                        style={[globalStyles.setDetailDropdownBtn, {borderColor: partsFilter.length > 0 ? '#007AFF' : '#555'}]}
+                                        style={[styles.setDetailDropdownBtn, {borderColor: partsFilter.length > 0 ? colors.primaryLight : colors.borderDark}]}
                                     >
-                                        <MaterialIcons name="filter-list" size={16} color={partsFilter.length > 0 ? '#007AFF' : '#555'}/>
-                                        <Text style={[globalStyles.setDetailDropdownBtnText, {color: partsFilter.length > 0 ? '#007AFF' : '#555'}]} numberOfLines={1}>{filterLabel}</Text>
+                                        <MaterialIcons name="filter-list" size={16} color={partsFilter.length > 0 ? colors.primaryLight : colors.textSecondary}/>
+                                        <Text style={[styles.setDetailDropdownBtnText, {color: partsFilter.length > 0 ? colors.primaryLight : colors.textSecondary}]} numberOfLines={1}>{filterLabel}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={() => setSortDropdownVisible(true)}
-                                        style={[globalStyles.setDetailDropdownBtn, globalStyles.setDetailDropdownBtnSort]}
+                                        style={[styles.setDetailDropdownBtn, styles.setDetailDropdownBtnSort]}
                                     >
                                         <MaterialIcons name="sort" size={16} color="#555"/>
-                                        <Text style={[globalStyles.setDetailDropdownBtnText, globalStyles.setDetailDropdownBtnSortText]}>{currentSortLabel}</Text>
+                                        <Text style={[styles.setDetailDropdownBtnText, styles.setDetailDropdownBtnSortText]}>{currentSortLabel}</Text>
                                     </TouchableOpacity>
                                 </View>
                                 <FlatList
@@ -675,31 +704,31 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
 
             {/* Filter dropdown */}
             <Modal visible={filterDropdownVisible} transparent animationType="fade">
-                <TouchableOpacity style={globalStyles.modalOverlay} activeOpacity={1} onPress={() => setFilterDropdownVisible(false)}>
-                    <View style={[globalStyles.modalContent, globalStyles.setDetailDropdownModalContent]}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFilterDropdownVisible(false)}>
+                    <View style={[styles.modalContent, styles.setDetailDropdownModalContent]}>
                         <TouchableOpacity
                             onPress={() => setFilterDropdownVisible(false)}
-                            style={globalStyles.setDetailCloseButton}
+                            style={styles.setDetailCloseButton}
                             hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
                             activeOpacity={0.7}
                         >
-                            <Text style={globalStyles.closeButtonText}>×</Text>
+                            <Text style={styles.closeButtonText}>×</Text>
                         </TouchableOpacity>
-                        <Text style={[globalStyles.modalTitle, globalStyles.setDetailDropdownModalTitle]}>Filter</Text>
+                        <Text style={[styles.modalTitle, styles.setDetailDropdownModalTitle]}>Filter</Text>
                         {FILTER_OPTIONS.map(option => {
                             const active = partsFilter.includes(option.key);
                             return (
                                 <TouchableOpacity
                                     key={option.key}
                                     onPress={() => togglePartsFilter(option.key)}
-                                    style={globalStyles.setDetailFilterOption}
+                                    style={styles.setDetailFilterOption}
                                 >
                                     <MaterialIcons
                                         name={active ? 'check-box' : 'check-box-outline-blank'}
                                         size={22}
-                                        color={active ? '#007AFF' : '#555'}
+                                        color={active ? colors.primaryLight : colors.textSecondary}
                                     />
-                                    <Text style={globalStyles.setDetailSortOptionText}>{option.label}</Text>
+                                    <Text style={styles.setDetailSortOptionText}>{option.label}</Text>
                                 </TouchableOpacity>
                             );
                         })}
@@ -709,17 +738,17 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
 
             {/* Sort dropdown */}
             <Modal visible={sortDropdownVisible} transparent animationType="fade">
-                <TouchableOpacity style={globalStyles.modalOverlay} activeOpacity={1} onPress={() => setSortDropdownVisible(false)}>
-                    <View style={[globalStyles.modalContent, globalStyles.setDetailDropdownModalContent]}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortDropdownVisible(false)}>
+                    <View style={[styles.modalContent, styles.setDetailDropdownModalContent]}>
                         <TouchableOpacity
                             onPress={() => setSortDropdownVisible(false)}
-                            style={globalStyles.setDetailCloseButton}
+                            style={styles.setDetailCloseButton}
                             hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
                             activeOpacity={0.7}
                         >
-                            <Text style={globalStyles.closeButtonText}>×</Text>
+                            <Text style={styles.closeButtonText}>×</Text>
                         </TouchableOpacity>
-                        <Text style={[globalStyles.modalTitle, globalStyles.setDetailDropdownModalTitle]}>Sort by</Text>
+                        <Text style={[styles.modalTitle, styles.setDetailDropdownModalTitle]}>Sort by</Text>
                         {SORT_OPTIONS.map(option => {
                             const active = partsSort.field === option.field && partsSort.direction === option.direction;
                             return (
@@ -730,9 +759,9 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                                         setSortDropdownVisible(false);
                                         partsListRef.current?.scrollToOffset({offset: 0, animated: false});
                                     }}
-                                    style={[globalStyles.setDetailSortOption, active && globalStyles.setDetailSortOptionActive]}
+                                    style={[styles.setDetailSortOption, active && styles.setDetailSortOptionActive]}
                                 >
-                                    <Text style={active ? globalStyles.setDetailSortOptionTextBold : globalStyles.setDetailSortOptionText}>{option.label}</Text>
+                                    <Text style={active ? styles.setDetailSortOptionTextBold : styles.setDetailSortOptionText}>{option.label}</Text>
                                 </TouchableOpacity>
                             );
                         })}
@@ -742,28 +771,28 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
 
             {/* Image preview modal */}
             <Modal visible={!!imagePreviewUrl} transparent animationType="fade">
-                <View style={globalStyles.modalOverlay}>
-                    <View style={globalStyles.modalContent}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
                         <TouchableOpacity
                             onPress={() => setImagePreviewUrl(null)}
-                            style={globalStyles.setDetailCloseButton}
+                            style={styles.setDetailCloseButton}
                             hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
                             activeOpacity={0.7}
                         >
-                            <Text style={globalStyles.closeButtonText}>×</Text>
+                            <Text style={styles.closeButtonText}>×</Text>
                         </TouchableOpacity>
                         {imagePreviewSize
                             ? <Image
                                 source={{uri: imagePreviewUrl}}
-                                style={[globalStyles.setDetailPreviewImage, {width: imagePreviewSize.width, height: imagePreviewSize.height}]}
+                                style={[styles.setDetailPreviewImage, {width: imagePreviewSize.width, height: imagePreviewSize.height}]}
                                 resizeMode="contain"
                             />
-                            : <ActivityIndicator style={globalStyles.setDetailPreviewLoader}/>
+                            : <ActivityIndicator style={styles.setDetailPreviewLoader}/>
                         }
-                        <Text style={globalStyles.setDetailPreviewPartNumber}>
+                        <Text style={styles.setDetailPreviewPartNumber}>
                             {previewItemsRef.current[imagePreviewIndex]?.label}
                         </Text>
-                        <View style={globalStyles.setDetailPreviewNavRow}>
+                        <View style={styles.setDetailPreviewNavRow}>
                             <TouchableOpacity
                                 onPress={() => navigateImagePreview(-1)}
                                 disabled={imagePreviewIndex <= 0}
@@ -771,7 +800,7 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                             >
                                 <FontAwesome name="chevron-left" size={24} color={imagePreviewIndex <= 0 ? '#ccc' : '#333'}/>
                             </TouchableOpacity>
-                            <Text style={globalStyles.setDetailPreviewNavCounter}>
+                            <Text style={styles.setDetailPreviewNavCounter}>
                                 {imagePreviewIndex + 1} / {previewItemsRef.current.length}
                             </Text>
                             <TouchableOpacity
@@ -788,38 +817,38 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
 
             {/* Modal */}
             <Modal visible={modalVisible} transparent animationType="fade">
-                <View style={globalStyles.modalOverlay}>
-                    <View style={globalStyles.modalContent}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
                         <TouchableOpacity
                             onPress={() => setModalVisible(false)}
-                            style={globalStyles.setDetailCloseButton}
+                            style={styles.setDetailCloseButton}
                             hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
                             activeOpacity={0.7}
                         >
-                            <Text style={globalStyles.closeButtonText}>×</Text>
+                            <Text style={styles.closeButtonText}>×</Text>
                         </TouchableOpacity>
                         {selectedPart && (
                             <>
-                                <Text style={globalStyles.modalTitle}>{selectedPart.partNumber} - {selectedPart.name}</Text>
+                                <Text style={styles.modalTitle}>{selectedPart.partNumber} - {selectedPart.name}</Text>
 
                                 {[
                                     {key: "missingQuantity", label: "Missing"},
                                     {key: "damagedQuantity", label: "Broken"},
                                     {key: "discolouredQuantity", label: "Discoloured"},
                                 ].map(({key, label}) => (
-                                    <View key={key} style={globalStyles.counterRow}>
-                                        <Text style={globalStyles.setDetailCounterLabel}>{label}</Text>
+                                    <View key={key} style={styles.counterRow}>
+                                        <Text style={styles.setDetailCounterLabel}>{label}</Text>
 
-                                        <TouchableOpacity style={globalStyles.counterBtn} delayPressIn={0} onPress={() => updateSelectedPart(key, -1)}>
-                                            <Text style={globalStyles.counterBtnText}>−</Text>
+                                        <TouchableOpacity style={styles.counterBtn} delayPressIn={0} onPress={() => updateSelectedPart(key, -1)}>
+                                            <Text style={styles.counterBtnText}>−</Text>
                                         </TouchableOpacity>
 
-                                        <Text style={globalStyles.counterValue}>
+                                        <Text style={styles.counterValue}>
                                             {Number(part[key] ?? 0)}
                                         </Text>
 
-                                        <TouchableOpacity style={globalStyles.counterBtn} delayPressIn={0} onPress={() => updateSelectedPart(key, 1)}>
-                                            <Text style={globalStyles.counterBtnText}>+</Text>
+                                        <TouchableOpacity style={styles.counterBtn} delayPressIn={0} onPress={() => updateSelectedPart(key, 1)}>
+                                            <Text style={styles.counterBtnText}>+</Text>
                                         </TouchableOpacity>
                                     </View>
                                 ))}
@@ -827,12 +856,12 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                                 {savingPart
                                     ? <ActivityIndicator/>
                                     : (
-                                        <View style={globalStyles.container}>
+                                        <View style={styles.container}>
                                             <TouchableOpacity
-                                                style={globalStyles.button}
+                                                style={styles.button}
                                                 onPress={() => savePartState(selectedPart, setSavingPart, setSet, setModalVisible, setGlobalError)}
                                             >
-                                                <Text style={globalStyles.text}>Save</Text>
+                                                <Text style={[styles.text, {color: '#fff'}]}>Save</Text>
                                             </TouchableOpacity>
                                         </View>
                                     )}
@@ -841,6 +870,16 @@ td{padding:6px;border:1px solid #ccc;vertical-align:middle}
                     </View>
                 </View>
             </Modal>
+
+            <MoveModal
+                modalVisible={moveModalVisible}
+                setModalVisible={setMoveModalVisible}
+                onMove={handleMoveSetToBoard}
+                setGlobalError={setGlobalError}
+                setGlobalLoading={setGlobalLoading}
+                excludeId={bordId}
+                title="Verplaats set naar welk bord?"
+            />
         </View>
     );
 }

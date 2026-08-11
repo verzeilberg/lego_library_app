@@ -1,5 +1,5 @@
 import { Modal, Text, Switch, TextInput, TouchableOpacity, View, Pressable, Image } from "react-native";
-import { globalStyles } from "../../styles";
+import { useStyles, useTheme } from "../../styles";
 import React, { useState, useEffect } from "react";
 import { handleSubmitAddEditBoard, handleSubmitAddSet } from "../Apicalls";
 import Config from "../../config/config";
@@ -16,15 +16,17 @@ export default function AddModal({
                                      mode = 'add',
                                      data = null
                                  }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const maxLength = 50;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [isPublicPrivate, setIsPublicPrivate] = useState(false);
     const [legoNmbr, setLegoNmbr] = useState('');
-    const [addLegoParts, setAddLegoParts] = useState(false);
-    const [addLegoMinifigs, setAddLegoMinifigs] = useState(false);
-    const [addLegoImages, setAddLegoImages] = useState(false);
+    const [addLegoParts, setAddLegoParts] = useState(true);
+    const [addLegoMinifigs, setAddLegoMinifigs] = useState(true);
+    const [addLegoImages, setAddLegoImages] = useState(true);
 
     const [selectedImage, setSelectedImage] = useState(null);
     const [imageChanged, setImageChanged] = useState(false);
@@ -56,9 +58,9 @@ export default function AddModal({
         } else if (mode === 'addItem') {
 
             setLegoNmbr('');
-            setAddLegoParts(false);
-            setAddLegoImages(false);
-            setAddLegoMinifigs(false);
+            setAddLegoParts(true);
+            setAddLegoImages(true);
+            setAddLegoMinifigs(true);
 
             setTitle('');
             setDescription('');
@@ -77,7 +79,7 @@ export default function AddModal({
             setAddLegoMinifigs(false);
         }
 
-    }, [modalVisible, mode, data]);
+    }, [modalVisible, mode, data?.id, data?.bordId, data?.title, data?.description, data?.isPublic, data?.filePath]);
 
     const pickImage = async () => {
         const result = await selectImage();
@@ -124,83 +126,95 @@ export default function AddModal({
         switch (mode) {
             case 'add': return 'Bord toevoegen';
             case 'addItem': return 'Set toevoegen';
-            case 'edit': return 'Wijzigingen opslaan';
+            case 'edit': return 'Opslaan';
             default: return 'Opslaan';
         }
     };
 
     return (
-        <View style={globalStyles.modalPlaceHolder}>
+        <View style={styles.modalPlaceHolder}>
             <Modal
                 visible={modalVisible}
                 animationType="slide"
                 transparent={true}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={globalStyles.modalBackground}>
-                    <View style={globalStyles.modalContainer}>
+                <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
                         {/* Header */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 10 }}>
-                            <Text style={globalStyles.h1}>{getTitleText()}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <MaterialIcons name="close" size={28} color="gray" />
+                            <Text style={styles.h1}>{getTitleText()}</Text>
+                            <TouchableOpacity
+                                onPress={() => setModalVisible(false)}
+                                style={styles.setDetailCloseButton}
+                                hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.closeButtonText}>×</Text>
                             </TouchableOpacity>
                         </View>
 
                         {mode === 'addItem' ? (
                             <>
                                 {/* Info text above the input */}
-                                <Text style={{ marginBottom: 5, fontWeight: 'bold' }}>
+                                <Text style={{ marginBottom: 5, fontWeight: 'bold', color: colors.text }}>
                                     Voer het Lego-nummer in:
                                 </Text>
 
                                 {/* TextInput for addItem mode */}
                                 <TextInput
-                                    style={globalStyles.input2}
+                                    style={styles.input2}
                                     value={legoNmbr}
-                                    onChangeText={setLegoNmbr}
+                                    onChangeText={(t) => setLegoNmbr(t.replace(/[^0-9]/g, ''))}
                                     placeholder="Lego nummer"
+                                    keyboardType="numeric"
                                 />
 
                                 {/* Switches with icons */}
                                 <View style={{ marginTop: 10 }}>
                                     {/* Add image(s) switch */}
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 10 }}>
-                                        <MaterialIcons name="image" size={24} color="#555" style={{ marginRight: 8 }} />
-                                        <Text style={{ flexShrink: 1, fontWeight: 'bold', fontSize: 16, color: '#000', marginRight: 8 }}>
-                                            Add image(s)
-                                        </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 10 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <MaterialIcons name="image" size={24} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text }}>
+                                                Add image(s)
+                                            </Text>
+                                        </View>
                                         <Switch
-                                            trackColor={{ false: '#767577', true: '#349A20FF' }}
-                                            thumbColor={addLegoImages ? '#3dd51e' : '#f4f3f4'}
+                                            trackColor={{ false: colors.switchTrack, true: colors.switchTrackOn }}
+                                            thumbColor={addLegoImages ? colors.switchActive : colors.switchThumb}
                                             onValueChange={toggleImages}
                                             value={addLegoImages}
                                         />
                                     </View>
 
                                     {/* Add parts switch */}
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 10 }}>
-                                        <MaterialIcons name="construction" size={24} color="#555" style={{ marginRight: 8 }} />
-                                        <Text style={{ flexShrink: 1, fontWeight: 'bold', fontSize: 16, color: '#000', marginRight: 8 }}>
-                                            Add parts
-                                        </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 10 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <MaterialIcons name="construction" size={24} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text }}>
+                                                Add parts
+                                            </Text>
+                                        </View>
                                         <Switch
-                                            trackColor={{ false: '#767577', true: '#349A20FF' }}
-                                            thumbColor={addLegoParts ? '#3dd51e' : '#f4f3f4'}
+                                            trackColor={{ false: colors.switchTrack, true: colors.switchTrackOn }}
+                                            thumbColor={addLegoParts ? colors.switchActive : colors.switchThumb}
                                             onValueChange={toggleParts}
                                             value={addLegoParts}
                                         />
                                     </View>
 
                                     {/* Add minifigs switch */}
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 10 }}>
-                                        <MaterialIcons name="person" size={24} color="#555" style={{ marginRight: 8 }} />
-                                        <Text style={{ flexShrink: 1, fontWeight: 'bold', fontSize: 16, color: '#000', marginRight: 8 }}>
-                                            Add minifigs
-                                        </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 10 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <MaterialIcons name="person" size={24} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                                            <Text style={{ fontWeight: 'bold', fontSize: 16, color: colors.text }}>
+                                                Add minifigs
+                                            </Text>
+                                        </View>
                                         <Switch
-                                            trackColor={{ false: '#767577', true: '#349A20FF' }}
-                                            thumbColor={addLegoMinifigs ? '#3dd51e' : '#f4f3f4'}
+                                            trackColor={{ false: colors.switchTrack, true: colors.switchTrackOn }}
+                                            thumbColor={addLegoMinifigs ? colors.switchActive : colors.switchThumb}
                                             onValueChange={toggleMinifigs}
                                             value={addLegoMinifigs}
                                         />
@@ -211,27 +225,29 @@ export default function AddModal({
                             <>
                                 {/* Image picker */}
                                 <TouchableOpacity
-                                    style={globalStyles.parentImageRectangleContainer}
+                                    style={styles.parentImageRectangleContainer}
                                     onPress={pickImage}
                                 >
-                                    <Image
-                                        source={selectedImage ? { uri: selectedImage } : { uri: Config.API_BASE_URL }}
-                                        style={globalStyles.imageRectangleContainer}
-                                        resizeMode="cover"
-                                    />
+                                    {selectedImage ? (
+                                        <Image
+                                            source={{ uri: selectedImage }}
+                                            style={styles.imageRectangleContainer}
+                                            resizeMode="cover"
+                                        />
+                                    ) : null}
                                 </TouchableOpacity>
 
                                 {/* Title input */}
                                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
                                     <TextInput
-                                        style={globalStyles.input2}
+                                        style={styles.input2}
                                         value={title}
                                         onChangeText={(t) => { if (t.length <= maxLength) setTitle(t); }}
                                         placeholder="Titel"
                                         maxLength={maxLength}
                                     />
                                     <TextInput
-                                        style={globalStyles.counter}
+                                        style={styles.counter}
                                         value={`${title.length}/${maxLength}`}
                                         editable={false}
                                         pointerEvents="none"
@@ -240,7 +256,7 @@ export default function AddModal({
 
                                 {/* Description input */}
                                 <TextInput
-                                    style={globalStyles.textArea}
+                                    style={styles.textArea}
                                     multiline
                                     numberOfLines={4}
                                     onChangeText={setDescription}
@@ -254,12 +270,12 @@ export default function AddModal({
                         {/* Public/Private switch (only for bords) */}
                         {mode !== 'addItem' && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-                                <Text style={{ marginRight: 10 }}>
+                                <Text style={{ marginRight: 10, color: colors.text }}>
                                     {isPublicPrivate ? 'Public' : 'Prive'}
                                 </Text>
                                 <Switch
-                                    trackColor={{ false: '#767577', true: '#81b0ff' }}
-                                    thumbColor={isPublicPrivate ? '#007BFF' : '#f4f3f4'}
+                                    trackColor={{ false: colors.switchTrack, true: colors.switchTrackOn }}
+                                    thumbColor={isPublicPrivate ? colors.switchActive : colors.switchThumb}
                                     onValueChange={togglePublicPrivate}
                                     value={isPublicPrivate}
                                 />
@@ -267,12 +283,12 @@ export default function AddModal({
                         )}
 
                         {/* Submit button */}
-                        <Pressable style={globalStyles.button} onPress={handleSubmit}>
-                            <Text style={globalStyles.text}>{getButtonText()}</Text>
+                        <Pressable style={styles.button} onPress={handleSubmit}>
+                            <Text style={[styles.text, {color: '#fff'}]}>{getButtonText()}</Text>
                         </Pressable>
 
                         {errorMessage && (
-                            <Text style={{ color: 'red', marginTop: 10 }}>{errorMessage}</Text>
+                            <Text style={{ color: colors.danger, marginTop: 10 }}>{errorMessage}</Text>
                         )}
                     </View>
                 </View>

@@ -14,7 +14,7 @@ const processImage = async (uri) => {
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
     );
 
-    return manipulated.uri + `?t=${Date.now()}`;
+    return manipulated.uri;
 };
 
 
@@ -34,7 +34,7 @@ export const openCameraWithoutUpload = async () => {
     return ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.7,
     });
 };
 
@@ -62,7 +62,7 @@ export const openImageLibraryWithoutUpload = async (
         allowsEditing,
         allowsMultipleSelection: allowMultiple,
         selectionLimit,
-        quality: 1,
+        quality: 0.7,
     });
 };
 
@@ -83,7 +83,7 @@ export const selectImage = () => {
                 { text: "Bibliotheek", onPress: async () =>
                         resolve(await openImageLibraryWithoutUpload(true,0,false)) },
                 { text: "Annuleer", style: "cancel",
-                    onPress: () => resolve({ cancelled: true }) },
+                    onPress: () => resolve({ canceled: true }) },
             ]
         );
 
@@ -95,9 +95,7 @@ export const selectImage = () => {
  * Image selection dialog with delete option.
  */
 export const selectImageWithDelete = (onDelete) => {
-
     return new Promise((resolve) => {
-
         Alert.alert(
             "Kies een optie",
             "Wil je een foto nemen of kiezen uit de bibliotheek?",
@@ -107,11 +105,10 @@ export const selectImageWithDelete = (onDelete) => {
                 { text: "Bibliotheek", onPress: async () =>
                         resolve(await openImageLibraryWithoutUpload(true,0,false)) },
                 { text: "Verwijder", style: "destructive",
-                    onPress: () => { onDelete(); resolve({ cancelled: true }); } },
+                    onPress: () => { onDelete(); resolve({ canceled: true }); } },
                 { text: "Annuleer", style: "cancel",
-                    onPress: () => resolve({ cancelled: true }) },
+                    onPress: () => resolve({ canceled: true }) },
             ]
         );
-
     });
 };

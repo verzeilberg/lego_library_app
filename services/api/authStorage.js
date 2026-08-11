@@ -1,10 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const saveTokens = async (token, refresh) => {
-    await AsyncStorage.multiSet([
-        ['token', token],
-        ['refresh_token', refresh],
-    ]);
+    const pairs = [['token', token]];
+    if (refresh) pairs.push(['refresh_token', refresh]);
+    await AsyncStorage.multiSet(pairs);
 };
 
 export const getToken = async () => {
